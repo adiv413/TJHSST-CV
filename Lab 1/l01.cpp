@@ -9,6 +9,7 @@
 #include <vector>
 #include <cmath>
 #include <climits>
+#include <cfloat>
 
 using namespace std;
 
@@ -48,11 +49,12 @@ void write_board(int **pixels, int height, int width) {
 
 class Point {
     public:
-        int x;
-        int y;
+        double x;
+        double y;
 
-        Point(int first, int second) : x(first), y(second) {}
+        Point(double first, double second) : x(first), y(second) {}
         Point(const Point &other) : x(other.x), y(other.y) {}
+        Point() : x(0.0), y(0.0) {}
 
         double distance(Point other) {
             return sqrt(pow(other.x - x, 2) + pow(other.y - y, 2));
@@ -64,6 +66,7 @@ class Line {
         Point first;
         Point second;
         double length;
+        double slope;
 
         // draw a line between any two given points
         void draw_line(int **pixels) {
@@ -82,7 +85,52 @@ class Line {
             }
         }
 
-        Line(Point p1, Point p2) : first(p1), second(p2), length(p1.distance(p2)) {}
+        // note: the lines cannot be parallel
+        Point find_intersection(Line other) {
+            if(slope == other.slope) {
+                return Point(0.0, 0.0); // no intersection between parallel lines
+            }
+            else if (slope == DBL_MAX && other.slope == 0) { // x = ___ and y = ___
+                return Point(first.x, other.first.y);
+            } 
+            else if (slope == 0 && other.slope == DBL_MAX) { // y = ___ and x = ___ 
+                return Point(other.first.x, first.y);
+            }
+            else if(slope == DBL_MAX) {
+                return Point(first.x, other.slope * (first.x - other.first.x) + other.first.y);
+            }
+            else if(slope == 0) {
+                return Point((first.y - other.first.y) / other.slope + other.first.x, first.y); 
+            }
+            else if(other.slope == 0 || other.slope == DBL_MAX) {
+                return other.find_intersection(getCopy());
+            }
+            else {
+                double x = (other.slope * other.first.x - slope * first.x + first.y - other.first.y) / (other.slope - slope);
+                double y = slope * (x - first.x) + first.y;
+                return Point(x, y);
+            }
+        }
+
+        // returns a copy of this line
+        Line getCopy() {
+            return Line(first, second);
+        }
+
+        Line(Point p1, Point p2) : first(p1), second(p2), length(p1.distance(p2)) {
+            // slope: (y2 - y1) / (x2 - x1)
+            if(p1.x == p2.x) {
+                slope = DBL_MAX; // infinite slope
+            }
+            else if(p1.y == p2.y) {
+                slope = 0;
+            }
+            else {
+                slope = (p2.y - p1.y) / (p2.x - p1.x);
+            }
+        }
+
+        Line(Point p1, double m) : first(p1), slope(m), second(Point(p1.x + 1, p1.y + slope)) {}
 
     private:
         // bresenham algorithm to draw a line between two given points
@@ -161,12 +209,15 @@ class Triangle {
         double incircle_radius;
         double circumcircle_radius;
 
+        Point incircle_center;
+        Point circumcircle_center;
+
         // lengths of the lines
         double a;
         double b;
         double c;
 
-        Triangle(Point p1, Point p2, Point p3) {
+        Triangle(Point p1, Point p2, Point p3, int **pixels) {
             lines.push_back(Line(p1, p2));
             lines.push_back(Line(p2, p3));
             lines.push_back(Line(p3, p1));
@@ -178,6 +229,40 @@ class Triangle {
             s = 0.5 * (a + b + c);
             incircle_radius = sqrt((s - a) * (s - b) * (s - c) / s);
             circumcircle_radius = a * b * c / (4 * incircle_radius * s);
+
+            // set incircle and circumcircle radii here
+
+            // circumcircle: find the intersection of the perpendicular bisectors of any two of the triangles sides
+            Point midpoint1((lines[0].second.x + lines[0].first.x) / 2, (lines[0].second.y + lines[0].first.y) / 2);
+            Point midpoint2((lines[1].second.x + lines[1].first.x) / 2, (lines[1].second.y + lines[1].first.y) / 2);
+
+            double slope1;
+            if(lines[0].slope == 0) {
+                slope1 = DBL_MAX;
+            }
+            else if(lines[0].slope == DBL_MAX) {
+                slope1 = 0;
+            } 
+            else {
+                slope1 = - (1 / lines[0].slope);
+            }
+
+            double slope2;
+            if(lines[1].slope == 0) {
+                slope2 = DBL_MAX;
+            }
+            else if(lines[1].slope == DBL_MAX) {
+                slope2 = 0;
+            } 
+            else {
+                slope2 = - (1 / lines[1].slope);
+            }
+
+            circumcircle_center = Line(midpoint1, slope1).find_intersection(Line(midpoint2, slope2));
+
+            Point test = Line(midpoint1, slope1).find_intersection(Line(midpoint2, slope2));
+
+            color_pixel(pixels, test.x, test.y);
         }
 
         void draw_triangle(int **pixels) {
@@ -257,13 +342,15 @@ int main() {
     cout << p2.x << " " << p2.y << endl;
     cout << p3.x << " " << p3.y << endl;
 
-    Triangle t(p1, p2, p3);
+    Triangle t(p1, p2, p3, pixels);
+
+    cout << t.circumcircle_center.x << " " << t.circumcircle_center.y << endl;
     
     t.draw_triangle(pixels);
     Circle c(Point(50, 50), t.incircle_radius, height, width);
     c.draw_circle(pixels);
 
-    Circle c1(Point(50, 50), t.circumcircle_radius, height, width);
+    Circle c1(t.circumcircle_center, t.circumcircle_radius, height, width);
     c1.draw_circle(pixels);
     write_board(pixels, height, width);
 
