@@ -14,8 +14,8 @@
 using namespace std;
 
 // set pixel to be 1 (black pixel)
-void color_pixel(int **pixels, int x, int y, int height=INT_MAX, int width=INT_MAX) {
-    if(x < 0 || x > width || y < 0 || y > height);
+void color_pixel(int **pixels, int x, int y, int height, int width) {
+    if(x < 0 || x > width - 1 || y < 0 || y > height - 1);
     else {
         pixels[y][x] = 1; // reverse the order because of arrays
     }
@@ -68,6 +68,9 @@ class Line {
         double length;
         double slope;
 
+        int canvas_height;
+        int canvas_width;
+
         // draw a line between any two given points
         void draw_line(int **pixels) {
             int dx = second.x - first.x; // x2 - x1
@@ -75,13 +78,13 @@ class Line {
             int error = abs(dy) - abs(dx);
 
             if(error < 0 && second.x <= first.x) { // reverse the points
-                _draw_line_bresenham(pixels, second, first);
+                _draw_line_bresenham(pixels, second, first, canvas_height, canvas_width);
             }
             else if(error > 0 && second.y <= first.y) {
-                _draw_line_bresenham(pixels, second, first);
+                _draw_line_bresenham(pixels, second, first, canvas_height, canvas_width);
             }
             else {
-                _draw_line_bresenham(pixels, first, second);
+                _draw_line_bresenham(pixels, first, second, canvas_height, canvas_width);
             }
         }
 
@@ -114,10 +117,11 @@ class Line {
 
         // returns a copy of this line
         Line getCopy() {
-            return Line(first, second);
+            return Line(first, second, canvas_height, canvas_width);
         }
 
-        Line(Point p1, Point p2) : first(p1), second(p2), length(p1.distance(p2)) {
+        // point-point definition
+        Line(Point p1, Point p2, int c_height, int c_width) : first(p1), second(p2), length(p1.distance(p2)), canvas_height(c_height), canvas_width(c_width) {
             // slope: (y2 - y1) / (x2 - x1)
             if(p1.x == p2.x) {
                 slope = DBL_MAX; // infinite slope
@@ -130,12 +134,13 @@ class Line {
             }
         }
 
-        Line(Point p1, double m) : first(p1), slope(m), second(Point(p1.x + 1, p1.y + slope)) {}
+        // point-slope form
+        Line(Point p1, double m, int c_height, int c_width) : first(p1), slope(m), second(Point(p1.x + 1, p1.y + slope)), canvas_height(c_height), canvas_width(c_width) {}
 
     private:
         // bresenham algorithm to draw a line between two given points
         // note: the points must be in increasing order if x1 < x2 and y1 < y2
-        void _draw_line_bresenham(int **pixels, Point p1, Point p2) {
+        void _draw_line_bresenham(int **pixels, Point p1, Point p2, int canvas_height, int canvas_width) {
             int dx = p2.x - p1.x; // x2 - x1
             int dy = p2.y - p1.y; // y2 - y1
             int error = abs(dy) - abs(dx);  // negative: x driven, positive: y driven
@@ -145,7 +150,7 @@ class Line {
 
                 if(dy < 0) { // going down
                     for(int i = p1.x; i <= p2.x; i++) {
-                        color_pixel(pixels, i, j);
+                        color_pixel(pixels, i, j, canvas_height, canvas_width);
 
                         if(error >= 0) {
                             j -= 1;
@@ -156,7 +161,7 @@ class Line {
                 }
                 else { // normal case x driven
                     for(int i = p1.x; i <= p2.x; i++) {
-                        color_pixel(pixels, i, j);
+                        color_pixel(pixels, i, j, canvas_height, canvas_width);
 
                         if(error >= 0) {
                             j += 1;
@@ -171,7 +176,7 @@ class Line {
                     int i = p1.x;
 
                     for(int j = p1.y; j <= p2.y; j++) {
-                        color_pixel(pixels, i, j);
+                        color_pixel(pixels, i, j, canvas_height, canvas_width);
 
                         if(error <= 0) {
                             i -= 1;
@@ -185,7 +190,7 @@ class Line {
                     int i = p1.x;
 
                     for(int j = p1.y; j <= p2.y; j++) {
-                        color_pixel(pixels, i, j);
+                        color_pixel(pixels, i, j, canvas_height, canvas_width);
 
                         if(error <= 0) {
                             i += 1;
@@ -211,26 +216,34 @@ class Triangle {
 
         Point incircle_center;
         Point circumcircle_center;
+        Point centroid;
+
+        int canvas_height;
+        int canvas_width;
 
         // lengths of the lines
         double a;
         double b;
         double c;
 
-        Triangle(Point p1, Point p2, Point p3, int **pixels) {
-            lines.push_back(Line(p1, p2));
-            lines.push_back(Line(p2, p3));
-            lines.push_back(Line(p3, p1));
+        Triangle(Point p1, Point p2, Point p3, int c_height, int c_width) {
+            canvas_height = c_height;
+            canvas_width = c_width;
+
+            lines.push_back(Line(p1, p2, canvas_height, canvas_width));
+            lines.push_back(Line(p2, p3, canvas_height, canvas_width));
+            lines.push_back(Line(p3, p1, canvas_height, canvas_width));
 
             a = lines[0].length;
             b = lines[1].length;
             c = lines[2].length;
 
             s = 0.5 * (a + b + c);
+
+            cout << "area " << sqrt(s * (s - a) * (s - b) * (s - c)) << endl; // print area of triangle 
+
             incircle_radius = sqrt((s - a) * (s - b) * (s - c) / s);
             circumcircle_radius = a * b * c / (4 * incircle_radius * s);
-
-            // set incircle and circumcircle radii here
 
             // circumcircle: find the intersection of the perpendicular bisectors of any two of the triangles sides
             Point midpoint1((lines[0].second.x + lines[0].first.x) / 2, (lines[0].second.y + lines[0].first.y) / 2);
@@ -255,14 +268,23 @@ class Triangle {
                 slope2 = 0;
             } 
             else {
-                slope2 = - (1 / lines[1].slope);
+                slope2 = -(1 / lines[1].slope);
             }
 
-            circumcircle_center = Line(midpoint1, slope1).find_intersection(Line(midpoint2, slope2));
+            circumcircle_center = Line(midpoint1, slope1, canvas_height, canvas_width).find_intersection(Line(midpoint2, slope2, canvas_height, canvas_width));
 
-            Point test = Line(midpoint1, slope1).find_intersection(Line(midpoint2, slope2));
+            // incircle
+            // formula from https://artofproblemsolving.com/wiki/index.php/Incircle#:~:text=For%20a%20triangle%2C%20the%20center,the%20intersection%20of%20angle%20bisectors.
 
-            color_pixel(pixels, test.x, test.y);
+            double incenter_x = (p1.x * b + p2.x * c + p3.x * a) / (a + b + c);
+            double incenter_y = (p1.y * b + p2.y * c + p3.y * a) / (a + b + c);
+            incircle_center = Point(incenter_x, incenter_y);
+            
+            // centroid
+
+            double centroid_x = (p1.x + p2.x + p3.x) / 3;
+            double centroid_y = (p1.y + p2.y + p3.y) / 3;
+            centroid = Point(centroid_x, centroid_y);
         }
 
         void draw_triangle(int **pixels) {
@@ -287,7 +309,8 @@ class Circle {
             y = radius;
             y2 = y * y;
             ty = (2 * y) - 1; y2_new = y2;
-            for (x = 0; x <= xmax; x++) {
+            
+            for (x = 0; x <= xmax + 1; x++) {
                 if ((y2 - y2_new) >= ty) {
                     y2 -= ty;
                     y -= 1;
@@ -333,6 +356,23 @@ int main() {
     Point p2(rand() % height, rand() % width);
     Point p3(rand() % height, rand() % width);
 
+    // Point p1(2, 29);
+    // Point p2(79, 98);
+    // Point p3(56, 71);
+
+    // color_pixel(pixels, p1.x, p1.y);
+    // color_pixel(pixels, p2.x, p2.y);
+    // color_pixel(pixels, p3.x, p3.y);
+
+    // Line l1(p1, p2);
+    // Line l2(p2, p3);
+    // Line l3(p1, p3);
+    // l1.draw_line(pixels);
+    // l2.draw_line(pixels);
+    // l3.draw_line(pixels);
+
+
+
     // check that points are not collinear
     while((p1.x == p2.x && p2.x == p3.x) || (p1.y == p2.y && p2.y == p3.y)) {
         p3 = Point(rand() % height, rand() % width);
@@ -342,16 +382,18 @@ int main() {
     cout << p2.x << " " << p2.y << endl;
     cout << p3.x << " " << p3.y << endl;
 
-    Triangle t(p1, p2, p3, pixels);
-
-    cout << t.circumcircle_center.x << " " << t.circumcircle_center.y << endl;
-    
+    Triangle t(p1, p2, p3, height, width);
     t.draw_triangle(pixels);
-    Circle c(Point(50, 50), t.incircle_radius, height, width);
-    c.draw_circle(pixels);
 
-    Circle c1(t.circumcircle_center, t.circumcircle_radius, height, width);
-    c1.draw_circle(pixels);
+    Circle circumcircle(t.circumcircle_center, t.circumcircle_radius, height, width);
+    circumcircle.draw_circle(pixels);
+
+    Circle incircle(t.incircle_center, t.incircle_radius, height, width);
+    incircle.draw_circle(pixels);
+    
+    Line euler_line(t.circumcircle_center, t.centroid, height, width);
+    euler_line.draw_line(pixels);
+
     write_board(pixels, height, width);
 
     // cleanup
@@ -362,6 +404,8 @@ int main() {
 
     delete[] pixels;
 
+    cout << "done" << endl;
+
 }
 
 
@@ -370,6 +414,14 @@ int main() {
 // Test Cases:
 
 // Lines:
+
+// 2 51
+// 42 15
+// 0 58
+
+// 20 34
+// 0 69
+// 88 50
 
 // pair<Point, Point> points[] = {
 //     pair<Point, Point>{Point(9, 2), Point(1, 2)},
