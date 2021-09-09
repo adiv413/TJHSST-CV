@@ -240,8 +240,6 @@ class Triangle {
 
             s = 0.5 * (a + b + c);
 
-            cout << "area " << sqrt(s * (s - a) * (s - b) * (s - c)) << endl; // print area of triangle 
-
             incircle_radius = sqrt((s - a) * (s - b) * (s - c) / s);
             circumcircle_radius = a * b * c / (4 * incircle_radius * s);
 
@@ -333,8 +331,8 @@ class Circle {
 
 int main() {
     srand((unsigned) time(0));
-    int height = 100;
-    int width = 100;    
+    int height = 800;
+    int width = 800;    
 
     // allocate memory for pixel array
     // cleaner to keep the data type as int** and dynamically allocate
@@ -356,31 +354,10 @@ int main() {
     Point p2(rand() % height, rand() % width);
     Point p3(rand() % height, rand() % width);
 
-    // Point p1(2, 29);
-    // Point p2(79, 98);
-    // Point p3(56, 71);
-
-    // color_pixel(pixels, p1.x, p1.y);
-    // color_pixel(pixels, p2.x, p2.y);
-    // color_pixel(pixels, p3.x, p3.y);
-
-    // Line l1(p1, p2);
-    // Line l2(p2, p3);
-    // Line l3(p1, p3);
-    // l1.draw_line(pixels);
-    // l2.draw_line(pixels);
-    // l3.draw_line(pixels);
-
-
-
     // check that points are not collinear
     while((p1.x == p2.x && p2.x == p3.x) || (p1.y == p2.y && p2.y == p3.y)) {
         p3 = Point(rand() % height, rand() % width);
     }
-
-    cout << p1.x << " " << p1.y << endl;
-    cout << p2.x << " " << p2.y << endl;
-    cout << p3.x << " " << p3.y << endl;
 
     Triangle t(p1, p2, p3, height, width);
     t.draw_triangle(pixels);
@@ -392,7 +369,25 @@ int main() {
     incircle.draw_circle(pixels);
     
     Line euler_line(t.circumcircle_center, t.centroid, height, width);
-    euler_line.draw_line(pixels);
+    
+    // get the points where the line intersects with the boundaries of the screen: x = 0, width
+    Point left = Point(0, -euler_line.first.x * euler_line.slope + euler_line.first.y);
+    Point right = Point(width, euler_line.slope * (width - euler_line.first.x) + euler_line.first.y);
+
+    Line long_euler_line(left, right, height, width);
+    long_euler_line.draw_line(pixels);
+
+    // 9 point circle: circumcircle of the medial triangle
+    vector<Point> midpoints;
+
+    for(Line line : t.lines) {
+        midpoints.push_back(Point((line.first.x + line.second.x) / 2, (line.first.y + line.second.y) / 2));
+    }
+
+    Triangle medial(midpoints[0], midpoints[1], midpoints[2], height, width);
+
+    Circle nine_point_circle(medial.circumcircle_center, medial.circumcircle_radius, height, width);
+    nine_point_circle.draw_circle(pixels);
 
     write_board(pixels, height, width);
 
@@ -403,58 +398,4 @@ int main() {
     }
 
     delete[] pixels;
-
-    cout << "done" << endl;
-
 }
-
-
-
-
-// Test Cases:
-
-// Lines:
-
-// 2 51
-// 42 15
-// 0 58
-
-// 20 34
-// 0 69
-// 88 50
-
-// pair<Point, Point> points[] = {
-//     pair<Point, Point>{Point(9, 2), Point(1, 2)},
-//     pair<Point, Point>{Point(1, 2), Point(9, 2)},
-//     pair<Point, Point>{Point(0, 0), Point(9, 2)},
-//     pair<Point, Point>{Point(9, 2), Point(0, 0)},        
-//     pair<Point, Point>{Point(0, 9), Point(9, 2)},
-//     pair<Point, Point>{Point(9, 2), Point(0, 9)},
-//     pair<Point, Point>{Point(2, 2), Point(2, 9)},
-//     pair<Point, Point>{Point(2, 9), Point(2, 2)},
-//     pair<Point, Point>{Point(2, 2), Point(6, 9)},
-//     pair<Point, Point>{Point(2, 2), Point(6, 9)},
-//     pair<Point, Point>{Point(8, 2), Point(2, 9)},
-//     pair<Point, Point>{Point(8, 2), Point(2, 9)}
-// };
-
-// for(auto point_pair : points) {
-//     Line l(point_pair.first, point_pair.second);
-//     l.draw_line(pixels);
-//     cout << endl << endl;
-
-//     for(int i = 0; i < height; i++) {
-//         // initialize all values in pixel array to default value of 0 (white pixel)
-//         for(int j = 0; j < width; j++) {
-//             cout << pixels[i][j] << " ";
-//         }
-//         cout << endl;
-//     }
-
-//     for(int i = 0; i < height; i++) {
-//         // initialize all values in pixel array to default value of 0 (white pixel)
-//         for(int j = 0; j < width; j++) {
-//             pixels[i][j] = 0;
-//         }
-//     }
-// }
