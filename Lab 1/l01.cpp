@@ -73,18 +73,21 @@ class Line {
 
         // draw a line between any two given points
         void draw_line(int **pixels) {
-            int dx = second.x - first.x; // x2 - x1
-            int dy = second.y - first.y; // y2 - y1
+            Point scaled_first((int) (first.x * canvas_width), (int) (first.y * canvas_height));
+            Point scaled_second((int) (second.x * canvas_width), (int) (second.y * canvas_height));
+
+            int dx = scaled_second.x - scaled_first.x; // x2 - x1
+            int dy = scaled_second.y - scaled_first.y; // y2 - y1
             int error = abs(dy) - abs(dx);
 
-            if(error < 0 && second.x <= first.x) { // reverse the points
-                _draw_line_bresenham(pixels, second, first, canvas_height, canvas_width);
+            if(error < 0 && scaled_second.x <= scaled_first.x) { // reverse the points
+                _draw_line_bresenham(pixels, scaled_second, scaled_first, canvas_height, canvas_width);
             }
-            else if(error > 0 && second.y <= first.y) {
-                _draw_line_bresenham(pixels, second, first, canvas_height, canvas_width);
+            else if(error > 0 && scaled_second.y <= scaled_first.y) {
+                _draw_line_bresenham(pixels, scaled_second, scaled_first, canvas_height, canvas_width);
             }
             else {
-                _draw_line_bresenham(pixels, first, second, canvas_height, canvas_width);
+                _draw_line_bresenham(pixels, scaled_first, scaled_second, canvas_height, canvas_width);
             }
         }
 
@@ -226,6 +229,7 @@ class Triangle {
         double b;
         double c;
 
+        // all calculations done in [0,1]
         Triangle(Point p1, Point p2, Point p3, int c_height, int c_width) {
             canvas_height = c_height;
             canvas_width = c_width;
@@ -255,7 +259,7 @@ class Triangle {
                 slope1 = 0;
             } 
             else {
-                slope1 = - (1 / lines[0].slope);
+                slope1 = -(1 / lines[0].slope);
             }
 
             double slope2;
@@ -350,22 +354,24 @@ int main() {
         }
     }
 
-    Point p1(rand() % height, rand() % width);
-    Point p2(rand() % height, rand() % width);
-    Point p3(rand() % height, rand() % width);
+    // randomly generate points in [0,1]
+
+    Point p1(((double) rand()) / RAND_MAX, ((double) rand()) / RAND_MAX);
+    Point p2(((double) rand()) / RAND_MAX, ((double) rand()) / RAND_MAX);
+    Point p3(((double) rand()) / RAND_MAX, ((double) rand()) / RAND_MAX);
 
     // check that points are not collinear
     while((p1.x == p2.x && p2.x == p3.x) || (p1.y == p2.y && p2.y == p3.y)) {
-        p3 = Point(rand() % height, rand() % width);
+        p3 = Point(((double) rand()) / RAND_MAX, ((double) rand()) / RAND_MAX);
     }
 
     Triangle t(p1, p2, p3, height, width);
     t.draw_triangle(pixels);
 
-    Circle circumcircle(t.circumcircle_center, t.circumcircle_radius, height, width);
+    Circle circumcircle(Point((int) (t.circumcircle_center.x * width), (int) (t.circumcircle_center.y * height)), t.circumcircle_radius * width, height, width);
     circumcircle.draw_circle(pixels);
 
-    Circle incircle(t.incircle_center, t.incircle_radius, height, width);
+    Circle incircle(Point((int) (t.incircle_center.x * width), (int) (t.incircle_center.y * height)), t.incircle_radius * width, height, width);
     incircle.draw_circle(pixels);
     
     Line euler_line(t.circumcircle_center, t.centroid, height, width);
@@ -385,8 +391,7 @@ int main() {
     }
 
     Triangle medial(midpoints[0], midpoints[1], midpoints[2], height, width);
-
-    Circle nine_point_circle(medial.circumcircle_center, medial.circumcircle_radius, height, width);
+    Circle nine_point_circle(Point((int) (medial.circumcircle_center.x * width), (int) (medial.circumcircle_center.y * height)), medial.circumcircle_radius * width, height, width);
     nine_point_circle.draw_circle(pixels);
 
     write_board(pixels, height, width);
