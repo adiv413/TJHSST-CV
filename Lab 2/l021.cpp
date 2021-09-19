@@ -322,7 +322,7 @@ void write_file(vector<Point> points) {
     outfile.close();
 }
 
-int main() {
+void part1() {
     srand((unsigned) time(0));
 
     // temporary, used for drawing only
@@ -413,21 +413,9 @@ int main() {
             points[3] = Point(((double) rand()) / RAND_MAX, ((double) rand()) / RAND_MAX);
         }
 
-        cout << points[0].x << " " << points[0].y << endl;
-        cout << points[1].x << " " << points[1].y << endl;
-        cout << points[2].x << " " << points[2].y << endl;
-        cout << points[3].x << " " << points[3].y << endl;
-        cout << endl;
-
     }
 
-    Triangle t(points[0], points[1], points[2], height, width);
-    t.draw_triangle(pixels);
-    
-    color_pixel(pixels, points[3].x * width, points[3].y * height, height, width);
-
-    write_board(pixels, height, width);
-
+    write_file(points);
 
     // cleanup
 
@@ -436,4 +424,8 @@ int main() {
     }
 
     delete[] pixels;
+}
+
+int main() {
+    part1();
 }
