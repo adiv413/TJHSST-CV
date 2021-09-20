@@ -314,10 +314,8 @@ void write_file(vector<Point> points) {
         outfile << "("  << p.x << "," << p.y << ")";
         
         if(i != points.size() - 1) {
-            outfile << " ,";
+            outfile << " , ";
         }
-
-        outfile << endl;
     }
     outfile.close();
 }
