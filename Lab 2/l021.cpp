@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <fstream>
+#include <string>
 #include <stdlib.h>
 #include <ctime>
 #include <utility>
@@ -50,8 +51,13 @@ void write_board(int **pixels, int height, int width) {
 
 class Point {
     public:
-        double x;
-        double y;
+        double getX() {
+            return x;
+        }
+
+        double getY() {
+            return y;
+        }
 
         Point(double first, double second) : x(first), y(second) {}
         Point(const Point &other) : x(other.x), y(other.y) {}
@@ -60,6 +66,10 @@ class Point {
         double distance(Point other) {
             return sqrt(pow(other.x - x, 2) + pow(other.y - y, 2));
         }
+
+    private:
+        double x;
+        double y;
 };
 
 class Line {
@@ -74,17 +84,17 @@ class Line {
 
         // draw a line between any two given points
         void draw_line(int **pixels) {
-            Point scaled_first((int) (first.x * canvas_width), (int) (first.y * canvas_height));
-            Point scaled_second((int) (second.x * canvas_width), (int) (second.y * canvas_height));
+            Point scaled_first((int) (first.getX() * canvas_width), (int) (first.getY() * canvas_height));
+            Point scaled_second((int) (second.getX() * canvas_width), (int) (second.getY() * canvas_height));
 
-            int dx = scaled_second.x - scaled_first.x; // x2 - x1
-            int dy = scaled_second.y - scaled_first.y; // y2 - y1
+            int dx = scaled_second.getX() - scaled_first.getX(); // x2 - x1
+            int dy = scaled_second.getY() - scaled_first.getY(); // y2 - y1
             int error = abs(dy) - abs(dx);
 
-            if(error < 0 && scaled_second.x <= scaled_first.x) { // reverse the points
+            if(error < 0 && scaled_second.getX() <= scaled_first.getX()) { // reverse the points
                 _draw_line_bresenham(pixels, scaled_second, scaled_first, canvas_height, canvas_width);
             }
-            else if(error > 0 && scaled_second.y <= scaled_first.y) {
+            else if(error > 0 && scaled_second.getY() <= scaled_first.getY()) {
                 _draw_line_bresenham(pixels, scaled_second, scaled_first, canvas_height, canvas_width);
             }
             else {
@@ -98,23 +108,23 @@ class Line {
                 return Point(0.0, 0.0); // no intersection between parallel lines
             }
             else if (slope == DBL_MAX && other.slope == 0) { // x = ___ and y = ___
-                return Point(first.x, other.first.y);
+                return Point(first.getX(), other.first.getY());
             } 
             else if (slope == 0 && other.slope == DBL_MAX) { // y = ___ and x = ___ 
-                return Point(other.first.x, first.y);
+                return Point(other.first.getX(), first.getY());
             }
             else if(slope == DBL_MAX) {
-                return Point(first.x, other.slope * (first.x - other.first.x) + other.first.y);
+                return Point(first.getX(), other.slope * (first.getX() - other.first.getX()) + other.first.getY());
             }
             else if(slope == 0) {
-                return Point((first.y - other.first.y) / other.slope + other.first.x, first.y); 
+                return Point((first.getY() - other.first.getY()) / other.slope + other.first.getX(), first.getY()); 
             }
             else if(other.slope == 0 || other.slope == DBL_MAX) {
                 return other.find_intersection(getCopy());
             }
             else {
-                double x = (other.slope * other.first.x - slope * first.x + first.y - other.first.y) / (other.slope - slope);
-                double y = slope * (x - first.x) + first.y;
+                double x = (other.slope * other.first.getX() - slope * first.getX() + first.getY() - other.first.getY()) / (other.slope - slope);
+                double y = slope * (x - first.getX()) + first.getY();
                 return Point(x, y);
             }
         }
@@ -127,33 +137,33 @@ class Line {
         // point-point definition
         Line(Point p1, Point p2, int c_height, int c_width) : first(p1), second(p2), length(p1.distance(p2)), canvas_height(c_height), canvas_width(c_width) {
             // slope: (y2 - y1) / (x2 - x1)
-            if(p1.x == p2.x) {
+            if(p1.getX() == p2.getX()) {
                 slope = DBL_MAX; // infinite slope
             }
-            else if(p1.y == p2.y) {
+            else if(p1.getY() == p2.getY()) {
                 slope = 0;
             }
             else {
-                slope = (p2.y - p1.y) / (p2.x - p1.x);
+                slope = (p2.getY() - p1.getY()) / (p2.getX() - p1.getX());
             }
         }
 
         // point-slope form
-        Line(Point p1, double m, int c_height, int c_width) : first(p1), slope(m), second(Point(p1.x + 1, p1.y + slope)), canvas_height(c_height), canvas_width(c_width) {}
+        Line(Point p1, double m, int c_height, int c_width) : first(p1), slope(m), second(Point(p1.getX() + 1, p1.getY() + slope)), canvas_height(c_height), canvas_width(c_width) {}
 
     private:
         // bresenham algorithm to draw a line between two given points
         // note: the points must be in increasing order if x1 < x2 and y1 < y2
         void _draw_line_bresenham(int **pixels, Point p1, Point p2, int canvas_height, int canvas_width) {
-            int dx = p2.x - p1.x; // x2 - x1
-            int dy = p2.y - p1.y; // y2 - y1
+            int dx = p2.getX() - p1.getX(); // x2 - x1
+            int dy = p2.getY() - p1.getY(); // y2 - y1
             int error = abs(dy) - abs(dx);  // negative: x driven, positive: y driven
 
             if(error < 0) { // x-driven
-                int j = p1.y; // y1
+                int j = p1.getY(); // y1
 
                 if(dy < 0) { // going down
-                    for(int i = p1.x; i <= p2.x; i++) {
+                    for(int i = p1.getX(); i <= p2.getX(); i++) {
                         color_pixel(pixels, i, j, canvas_height, canvas_width);
 
                         if(error >= 0) {
@@ -164,7 +174,7 @@ class Line {
                     }
                 }
                 else { // normal case x driven
-                    for(int i = p1.x; i <= p2.x; i++) {
+                    for(int i = p1.getX(); i <= p2.getX(); i++) {
                         color_pixel(pixels, i, j, canvas_height, canvas_width);
 
                         if(error >= 0) {
@@ -177,9 +187,9 @@ class Line {
             }
             else { // y-driven
                 if(dx < 0) { // going left
-                    int i = p1.x;
+                    int i = p1.getX();
 
-                    for(int j = p1.y; j <= p2.y; j++) {
+                    for(int j = p1.getY(); j <= p2.getY(); j++) {
                         color_pixel(pixels, i, j, canvas_height, canvas_width);
 
                         if(error <= 0) {
@@ -191,9 +201,9 @@ class Line {
                     }
                 }
                 else { // normal case y driven
-                    int i = p1.x;
+                    int i = p1.getX();
 
-                    for(int j = p1.y; j <= p2.y; j++) {
+                    for(int j = p1.getY(); j <= p2.getY(); j++) {
                         color_pixel(pixels, i, j, canvas_height, canvas_width);
 
                         if(error <= 0) {
@@ -249,8 +259,8 @@ class Triangle {
             circumcircle_radius = a * b * c / (4 * incircle_radius * s);
 
             // circumcircle: find the intersection of the perpendicular bisectors of any two of the triangles sides
-            Point midpoint1((lines[0].second.x + lines[0].first.x) / 2, (lines[0].second.y + lines[0].first.y) / 2);
-            Point midpoint2((lines[1].second.x + lines[1].first.x) / 2, (lines[1].second.y + lines[1].first.y) / 2);
+            Point midpoint1((lines[0].second.getX() + lines[0].first.getX()) / 2, (lines[0].second.getY() + lines[0].first.getY()) / 2);
+            Point midpoint2((lines[1].second.getX() + lines[1].first.getX()) / 2, (lines[1].second.getY() + lines[1].first.getY()) / 2);
 
             double slope1;
             if(lines[0].slope == 0) {
@@ -279,14 +289,14 @@ class Triangle {
             // incircle
             // formula from https://artofproblemsolving.com/wiki/index.php/Incircle#:~:text=For%20a%20triangle%2C%20the%20center,the%20intersection%20of%20angle%20bisectors.
 
-            double incenter_x = (p1.x * b + p2.x * c + p3.x * a) / (a + b + c);
-            double incenter_y = (p1.y * b + p2.y * c + p3.y * a) / (a + b + c);
+            double incenter_x = (p1.getX() * b + p2.getX() * c + p3.getX() * a) / (a + b + c);
+            double incenter_y = (p1.getY() * b + p2.getY() * c + p3.getY() * a) / (a + b + c);
             incircle_center = Point(incenter_x, incenter_y);
             
             // centroid
 
-            double centroid_x = (p1.x + p2.x + p3.x) / 3;
-            double centroid_y = (p1.y + p2.y + p3.y) / 3;
+            double centroid_x = (p1.getX() + p2.getX() + p3.getX()) / 3;
+            double centroid_y = (p1.getY() + p2.getY() + p3.getY()) / 3;
             centroid = Point(centroid_x, centroid_y);
         }
 
@@ -311,7 +321,7 @@ void write_file(vector<Point> points) {
 
     for(int i = 0; i < points.size(); i++) {
         Point p = points[i];
-        outfile << "("  << p.x << "," << p.y << ")";
+        outfile << "("  << p.getX() << "," << p.getY() << ")";
         
         if(i != points.size() - 1) {
             outfile << " , ";
@@ -350,7 +360,7 @@ void part1() {
     Point p3(((double) rand()) / RAND_MAX, ((double) rand()) / RAND_MAX);
 
     // check that points are not collinear
-    while((p1.x == p2.x && p2.x == p3.x) || (p1.y == p2.y && p2.y == p3.y)) {
+    while((p1.getX() == p2.getX() && p2.getX() == p3.getX()) || (p1.getY() == p2.getY() && p2.getY() == p3.getY())) {
         p3 = Point(((double) rand()) / RAND_MAX, ((double) rand()) / RAND_MAX);
     }
 
@@ -424,6 +434,57 @@ void part1() {
     delete[] pixels;
 }
 
+vector<Point> read_file() {
+    ifstream file;
+    file.open("points.txt");
+
+    string contents;
+    getline(file, contents);
+    contents += " "; // makes it easier to parse the points
+
+    cout << contents << endl;
+
+    vector<int> spaces;
+    for(int i = 0; i < contents.length(); i++) {
+        if(string(1, contents[i]) == " ") {
+            spaces.push_back(i);
+        }
+    }
+
+    int prev = 0;
+    vector<Point> points;
+
+    for(int i : spaces) {
+        string point_str = contents.substr(prev, i - prev);
+        prev = i;
+
+        if(point_str.find("(") == string::npos) {
+            continue;
+        }
+        
+        int left = point_str.find("(");
+        int center = point_str.find(",");
+        int right = point_str.find(")");
+
+        double x = stod(point_str.substr(left + 1, center - left - 1));
+        double y = stod(point_str.substr(center + 1, right - center - 1));
+
+        points.push_back(Point(x, y));
+    }
+
+    return points;
+}
+
+void part2() {
+    vector<Point> points = read_file();
+    cout << setprecision(17);
+
+    for(auto i : points) {
+        cout << i.getX() << " " << i.getY() << endl;
+    }
+}
+
 int main() {
-    part1();
+    // part1();
+    part2();
 }
