@@ -15,6 +15,29 @@
 
 using namespace std;
 
+class Point {
+    private:
+        double x;
+        double y;
+
+    public:
+        double getX() {
+            return x;
+        }
+
+        double getY() {
+            return y;
+        }
+
+        Point(double first, double second) : x(first), y(second) {}
+        Point(const Point &other) : x(other.x), y(other.y) {}
+        Point() : x(0.0), y(0.0) {}
+
+        double distance(Point other) {
+            return sqrt(pow(other.x - x, 2) + pow(other.y - y, 2));
+        }    
+};
+
 // set pixel to be 1 (black pixel)
 void color_pixel(int **pixels, int x, int y, int height, int width) {
     if(x < 0 || x > width - 1 || y < 0 || y > height - 1);
@@ -23,10 +46,21 @@ void color_pixel(int **pixels, int x, int y, int height, int width) {
     }
 }
 
+// scales point to canvas dimensions
+void color_pixel(int **pixels, Point p, int height, int width) {
+    int x = static_cast<int>(p.getX() * width);
+    int y = static_cast<int>(p.getY() * height);
+
+    if(x < 0 || x > width - 1 || y < 0 || y > height - 1);
+    else {
+        pixels[y][x] = 1; // reverse the order because of arrays
+    }
+}
+
 // write the board to a ppm file
-void write_board(int **pixels, int height, int width) {
+void write_board(int **pixels, int height, int width, string idx) {
     ofstream outfile;
-    outfile.open("output.ppm");
+    outfile.open("output" + idx + ".ppm");
 
     // header
     outfile << "P3 " << width << " " << height << " " << 255 << endl;
@@ -49,31 +83,8 @@ void write_board(int **pixels, int height, int width) {
     outfile.close();
 }
 
-class Point {
-    public:
-        double getX() {
-            return x;
-        }
-
-        double getY() {
-            return y;
-        }
-
-        Point(double first, double second) : x(first), y(second) {}
-        Point(const Point &other) : x(other.x), y(other.y) {}
-        Point() : x(0.0), y(0.0) {}
-
-        double distance(Point other) {
-            return sqrt(pow(other.x - x, 2) + pow(other.y - y, 2));
-        }
-
-    private:
-        double x;
-        double y;
-};
-
 class Line {
-    public:
+    private:
         Point first;
         Point second;
         double length;
@@ -82,10 +93,89 @@ class Line {
         int canvas_height;
         int canvas_width;
 
+        double threshold = 1e-10;
+
+    public:
+        double getLength() {
+            return first.distance(second);
+        }
+
+        Point getFirst() {
+            return first;
+        }
+        
+        Point getSecond() {
+            return second;
+        }
+
+        double getSlope() {
+            return slope;
+        }
+
         // draw a line between any two given points
         void draw_line(int **pixels) {
-            Point scaled_first((int) (first.getX() * canvas_width), (int) (first.getY() * canvas_height));
-            Point scaled_second((int) (second.getX() * canvas_width), (int) (second.getY() * canvas_height));
+            // both points intersect with top right bottom or left of screen
+            // check x = canvas_width, if 0 <= y && y <= canvas_height we're good
+            // else plug in y = 0, solve for x
+            Point scaled_first;
+            Point scaled_second;
+
+            // check 0 slope
+            if((-threshold <= slope) && (slope <= threshold)) {
+                cout << "0" << endl;
+                scaled_first = Point(static_cast<double>(canvas_width), first.getY() * canvas_height);
+                scaled_second = Point(-static_cast<double>(canvas_width), first.getY() * canvas_height);
+            }
+            // check infinite slope
+            else if(100000.0 <= abs(slope)) {
+                cout << "1" << endl;
+                scaled_first = Point(first.getX() * canvas_width, static_cast<double>(canvas_height));
+                scaled_second = Point(first.getX() * canvas_width, -static_cast<double>(canvas_height));
+            }
+            else {
+                // check right side
+                double right_y = slope * (canvas_width - first.getX() * canvas_width) + first.getY() * canvas_height;
+                if((0 <= right_y) && (right_y <= canvas_height)) {
+                    // hits the right side of the screen
+                    scaled_first = Point(canvas_width, right_y);
+                }
+                // check top
+                double top_x = (canvas_height - first.getY() * canvas_height) / slope + first.getX() * canvas_width;
+                if((0 <= top_x) && (top_x <= canvas_height)) {
+                    // hits the top of the screen
+                    if((scaled_first.getX() == 0.0) && (scaled_first.getY() == 0.0)) {
+                        scaled_first = Point(top_x, canvas_height);
+                    }
+                    else {
+                        scaled_second = Point(top_x, canvas_height);
+                    }
+                }
+                // check left
+                double left_y = slope * (0 - first.getX() * canvas_width) + first.getY() * canvas_height;
+                if((0 <= left_y) && (left_y <= canvas_height)) {
+                    // hits the left side of the screen
+                    if((scaled_first.getX() == 0.0) && (scaled_first.getY() == 0.0)) {
+                        scaled_first = Point(0, left_y); 
+                    }
+                    else if((scaled_second.getX() == 0.0) && (scaled_second.getY() == 0.0)){
+                        scaled_second = Point(0, left_y); 
+                    }
+                }
+                // check bottom
+                double bottom_x = (0 - first.getY() * canvas_height) / slope + first.getX() * canvas_width;
+                if((0 <= bottom_x) && (bottom_x <= canvas_height) && ((scaled_second.getX() == 0.0) && (scaled_second.getY() == 0.0))) {
+                    // hits the top of the screen
+                    scaled_second = Point(bottom_x, 0);
+                }
+
+                cout << "sfx sfy ssx ssy " << scaled_first.getX() << " " << scaled_first.getY() << " " << scaled_second.getX() << " " << scaled_second.getY() << endl;
+
+                cout << "ry tx ly bx " << right_y << " " << top_x << " " << left_y << " " << bottom_x << endl;
+                cout << "fx fy slope " << first.getX() * canvas_width << " " << first.getY() * canvas_height << " " << slope << endl;
+
+                // Point scaled_first((int) (first.getX() * canvas_width), (int) (first.getY() * canvas_height));
+                // Point scaled_second((int) (second.getX() * canvas_width), (int) (second.getY() * canvas_height));
+            }
 
             int dx = scaled_second.getX() - scaled_first.getX(); // x2 - x1
             int dy = scaled_second.getY() - scaled_first.getY(); // y2 - y1
@@ -104,22 +194,22 @@ class Line {
 
         // note: the lines cannot be parallel
         Point find_intersection(Line other) {
-            if(slope == other.slope) {
+            if((other.slope - threshold <= slope) && (slope <= other.slope + threshold)) {
                 return Point(0.0, 0.0); // no intersection between parallel lines
             }
-            else if (slope == DBL_MAX && other.slope == 0) { // x = ___ and y = ___
+            else if ((100000.0 <= abs(slope)) && ((-threshold <= other.slope) && (other.slope <= threshold))) { // x = ___ and y = ___
                 return Point(first.getX(), other.first.getY());
             } 
-            else if (slope == 0 && other.slope == DBL_MAX) { // y = ___ and x = ___ 
+            else if (((-threshold <= slope) && (slope <= threshold)) && (100000.0 <= abs(other.slope))) { // y = ___ and x = ___ 
                 return Point(other.first.getX(), first.getY());
             }
-            else if(slope == DBL_MAX) {
+            else if(100000.0 <= abs(slope)) {
                 return Point(first.getX(), other.slope * (first.getX() - other.first.getX()) + other.first.getY());
             }
-            else if(slope == 0) {
+            else if((-threshold <= slope) && (slope <= threshold)) {
                 return Point((first.getY() - other.first.getY()) / other.slope + other.first.getX(), first.getY()); 
             }
-            else if(other.slope == 0 || other.slope == DBL_MAX) {
+            else if(((-threshold <= other.slope) && (other.slope <= threshold)) || (100000.0 <= abs(other.slope))) {
                 return other.find_intersection(getCopy());
             }
             else {
@@ -132,6 +222,21 @@ class Line {
         // returns a copy of this line
         Line getCopy() {
             return Line(first, second, canvas_height, canvas_width);
+        }
+
+        Line make_perpendicular(Point other) {
+            double final_slope;
+            if(slope == DBL_MAX) {
+                final_slope = 0;
+            }
+            else if (slope == 0) {
+                final_slope = DBL_MAX;    
+            }
+            else {
+                final_slope = -(1.0 / slope);
+            }
+
+            return Line(other, final_slope, canvas_height, canvas_width);
         }
 
         // point-point definition
@@ -149,7 +254,7 @@ class Line {
         }
 
         // point-slope form
-        Line(Point p1, double m, int c_height, int c_width) : first(p1), slope(m), second(Point(p1.getX() + 1, p1.getY() + slope)), canvas_height(c_height), canvas_width(c_width) {}
+        Line(Point p1, double m, int c_height, int c_width) : first(p1), slope(m), second(Point(p1.getX() + 1, p1.getY() + m)), canvas_height(c_height), canvas_width(c_width) {}
 
     private:
         // bresenham algorithm to draw a line between two given points
@@ -219,7 +324,7 @@ class Line {
 };
 
 class Triangle {
-    public: 
+    private:
         vector<Line> lines;
 
         // semiperimeter
@@ -240,6 +345,7 @@ class Triangle {
         double b;
         double c;
 
+    public: 
         // all calculations done in [0,1]
         Triangle(Point p1, Point p2, Point p3, int c_height, int c_width) {
             canvas_height = c_height;
@@ -249,9 +355,9 @@ class Triangle {
             lines.push_back(Line(p2, p3, canvas_height, canvas_width));
             lines.push_back(Line(p3, p1, canvas_height, canvas_width));
 
-            a = lines[0].length;
-            b = lines[1].length;
-            c = lines[2].length;
+            a = lines[0].getLength();
+            b = lines[1].getLength();
+            c = lines[2].getLength();
 
             s = 0.5 * (a + b + c);
 
@@ -259,29 +365,29 @@ class Triangle {
             circumcircle_radius = a * b * c / (4 * incircle_radius * s);
 
             // circumcircle: find the intersection of the perpendicular bisectors of any two of the triangles sides
-            Point midpoint1((lines[0].second.getX() + lines[0].first.getX()) / 2, (lines[0].second.getY() + lines[0].first.getY()) / 2);
-            Point midpoint2((lines[1].second.getX() + lines[1].first.getX()) / 2, (lines[1].second.getY() + lines[1].first.getY()) / 2);
+            Point midpoint1((lines[0].getSecond().getX() + lines[0].getFirst().getX()) / 2, (lines[0].getSecond().getY() + lines[0].getFirst().getY()) / 2);
+            Point midpoint2((lines[1].getSecond().getX() + lines[1].getFirst().getX()) / 2, (lines[1].getSecond().getY() + lines[1].getFirst().getY()) / 2);
 
             double slope1;
-            if(lines[0].slope == 0) {
+            if(lines[0].getSlope() == 0) {
                 slope1 = DBL_MAX;
             }
-            else if(lines[0].slope == DBL_MAX) {
+            else if(lines[0].getSlope() == DBL_MAX) {
                 slope1 = 0;
             } 
             else {
-                slope1 = -(1 / lines[0].slope);
+                slope1 = -(1 / lines[0].getSlope());
             }
 
             double slope2;
-            if(lines[1].slope == 0) {
+            if(lines[1].getSlope() == 0) {
                 slope2 = DBL_MAX;
             }
-            else if(lines[1].slope == DBL_MAX) {
+            else if(lines[1].getSlope() == DBL_MAX) {
                 slope2 = 0;
             } 
             else {
-                slope2 = -(1 / lines[1].slope);
+                slope2 = -(1 / lines[1].getSlope());
             }
 
             circumcircle_center = Line(midpoint1, slope1, canvas_height, canvas_width).find_intersection(Line(midpoint2, slope2, canvas_height, canvas_width));
@@ -475,6 +581,141 @@ vector<Point> read_file() {
     return points;
 }
 
+vector<Point> get_smallest_square(vector<Point> points, int height, int width) {
+    // allocate memory for pixel array
+    // cleaner to keep the data type as int** and dynamically allocate
+    // rather than making it fixed width and passing around int[][size] in functions
+
+    int **pixels;
+    pixels = new int*[height];
+    
+    for(int i = 0; i < height; i++) {
+        pixels[i] = new int[width];
+
+        // initialize all values in pixel array to default value of 0 (white pixel)
+        for(int j = 0; j < width; j++) {
+            pixels[i][j] = 0;
+        }
+    }
+
+    // choose the first and second elements of points as the opposite points
+    Point a = points[0];
+    Point b = points[1];
+    Point c = points[2]; // choose any perpendicular point
+    Point d = points[3];
+
+    Line ab = Line(a, b, height, width);
+
+    // draw line perpendicular to a through c
+    Line ab_perp = ab.make_perpendicular(c);
+    
+    // pick point e on line ab_perp such that ce is the same length as ab
+
+    double distance = a.distance(b);
+    cout << "distance " << distance << endl;
+    double delta_x;
+    double delta_y;
+
+    if(ab_perp.getSlope() == 0) {
+        delta_x = distance;
+        delta_y = 0;
+    }
+    else if(ab_perp.getSlope() == DBL_MAX) {
+        delta_x = 0;
+        delta_y = distance;
+    }
+    else {
+        double vx = abs(ab_perp.getFirst().getX() - ab_perp.getSecond().getX());
+        double vy = abs(ab_perp.getFirst().getY() - ab_perp.getSecond().getY());
+
+        cout << "vx vy " << vx << " " << vy << " " << ab_perp.getLength() << endl; 
+
+        double ux = vx / ab_perp.getLength();
+        double uy = vy / ab_perp.getLength();
+
+        cout << "ux uy " << ux << " " << uy << endl; 
+
+
+        delta_x = ux * distance;
+        delta_y = uy * distance;
+
+    }
+    
+    // positive slope -> +dx, +dy or -dx, -dy, negative slope -> +dx, -dy or -dx, +dy
+
+    if(ab_perp.getSlope() < 0) {
+        delta_y = -delta_y;
+    }
+
+    cout << "distance dx dy abperpslope " << distance << " " << delta_x << " " << delta_y << " " << ab_perp.getSlope() << endl;
+
+    // two squares: one with c + dx,dy, one with c - dx,dy
+
+    Point e(c.getX() + delta_x, c.getY() + delta_y);
+    Line ce(c, e, height, width);
+    Line de(d, e, height, width);
+
+    Line af = de.make_perpendicular(a);
+    Line bg = de.make_perpendicular(b);
+
+    Point f = af.find_intersection(de);
+    Point g = bg.find_intersection(de);
+
+    Line ch = af.make_perpendicular(c);
+    Point h = ch.find_intersection(af);
+
+    // from here, the square is CHFG
+
+    // ab.draw_line(pixels);
+    // ab_perp.draw_line(pixels);
+    de.draw_line(pixels);
+    af.draw_line(pixels);
+    bg.draw_line(pixels);
+    ch.draw_line(pixels);
+    
+
+    Line hf(h, f, height, width);
+    Line fg(f, g, height, width);
+    Line cg(c, g, height, width);
+
+    // ch.draw_line(pixels);
+    // hf.draw_line(pixels);
+    // fg.draw_line(pixels);
+    // cg.draw_line(pixels);
+
+    color_pixel(pixels, a, height, width);
+    color_pixel(pixels, b, height, width);
+    color_pixel(pixels, c, height, width);
+    color_pixel(pixels, d, height, width);
+    color_pixel(pixels, e, height, width);
+
+    cout << " e " << e.getX() << " " << e.getY() << endl;
+    cout << " ab ce dist " << ab.getLength() << " " << ce.getLength() << endl;
+
+    // color_pixel(pixels, c, height, width);
+    // color_pixel(pixels, f, height, width);
+    // color_pixel(pixels, g, height, width);
+    // color_pixel(pixels, h, height, width);
+
+    // cout << c.getX() * width << " " << c.getY() * height << " sdlk" << endl;
+    // cout << f.getX() * width << " " << f.getY() * height << " sdlk" << endl;
+    // cout << g.getX() * width << " " << g.getY() * height << " sdlk" << endl;
+    // cout << h.getX() * width << " " << h.getY() * height << " sdlk" << endl;
+
+    // cout << ch.getSlope() << " sdlkfj " << af.getSlope() << endl;
+
+
+
+
+
+
+    e = Point(c.getX() - delta_x, c.getY() - delta_y);
+
+    write_board(pixels, height, width, to_string(1));
+    vector<Point> ret;
+    return ret;
+}
+
 void part2() {
     vector<Point> points = read_file();
     cout << setprecision(17);
@@ -482,9 +723,11 @@ void part2() {
     for(auto i : points) {
         cout << i.getX() << " " << i.getY() << endl;
     }
+
+    get_smallest_square(points, 100, 100);
 }
 
 int main() {
-    // part1();
+    part1();
     part2();
 }
