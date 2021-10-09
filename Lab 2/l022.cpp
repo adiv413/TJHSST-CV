@@ -122,13 +122,13 @@ class Line {
 
             // check 0 slope
             if((-threshold <= slope) && (slope <= threshold)) {
-                cout << "0" << endl;
+                // cout << "0" << endl;
                 scaled_first = Point(static_cast<double>(canvas_width), first.getY() * canvas_height);
                 scaled_second = Point(-static_cast<double>(canvas_width), first.getY() * canvas_height);
             }
             // check infinite slope
             else if(100000.0 <= abs(slope)) {
-                cout << "1" << endl;
+                // cout << "1" << endl;
                 scaled_first = Point(first.getX() * canvas_width, static_cast<double>(canvas_height));
                 scaled_second = Point(first.getX() * canvas_width, -static_cast<double>(canvas_height));
             }
@@ -315,6 +315,45 @@ class Line {
         }
 };
 
+class Circle {
+    private:
+        Point center;
+        double radius;
+        int canvas_height;
+        int canvas_width;
+
+    public:
+
+        Circle(Point p1, double r, int c_h, int c_w) : center(p1), radius(r), canvas_height(c_h), canvas_width(c_w) {}
+
+        void draw_circle(int **pixels) {
+            int x, y, xmax, y2, y2_new, ty;
+            xmax = (int) (radius * 0.70710678); // maximum x at radius/sqrt(2) + x0
+            y = radius;
+            y2 = y * y;
+            ty = (2 * y) - 1; y2_new = y2;
+            
+            for (x = 0; x <= xmax + 1; x++) {
+                if ((y2 - y2_new) >= ty) {
+                    y2 -= ty;
+                    y -= 1;
+                    ty -= 2;
+                }
+
+                color_pixel(pixels, x + center.getX(), y + center.getY(), canvas_height, canvas_width);
+                color_pixel(pixels, x + center.getX(), -y + center.getY(), canvas_height, canvas_width);
+                color_pixel(pixels, -x + center.getX(), y + center.getY(), canvas_height, canvas_width);
+                color_pixel(pixels, -x + center.getX(), -y + center.getY(), canvas_height, canvas_width);
+                color_pixel(pixels, y + center.getX(), x + center.getY(), canvas_height, canvas_width);
+                color_pixel(pixels, y + center.getX(), -x + center.getY(), canvas_height, canvas_width);
+                color_pixel(pixels, -y + center.getX(), x + center.getY(), canvas_height, canvas_width);
+                color_pixel(pixels, -y + center.getX(), -x + center.getY(), canvas_height, canvas_width);
+
+                y2_new -= (2 * x) - 3;
+            }
+        }
+};
+
 class Triangle {
     private:
         vector<Line> lines;
@@ -409,10 +448,10 @@ class Triangle {
         }
 };
 
-// write all points to points.txt
-void write_file(vector<Point> points) {
+// write all points to file
+void write_file(vector<Point> points, string filename) {
     ofstream outfile;
-    outfile.open("points.txt");
+    outfile.open(filename); // open in overwrite mode
 
     outfile << std::fixed << std::showpoint;
     outfile << std::setprecision(17);
@@ -425,6 +464,27 @@ void write_file(vector<Point> points) {
             outfile << " , ";
         }
     }
+    
+    outfile << endl;
+    outfile.close();
+}
+
+void write_file_with_area(vector<Point> points, double area, string filename) {
+    ofstream outfile;
+    outfile.open(filename, std::ios_base::app); // open in append mode
+
+    outfile << std::fixed << std::showpoint;
+    outfile << std::setprecision(17);
+
+    for(int i = 0; i < points.size(); i++) {
+        Point p = points[i];
+        outfile << "("  << p.getX() << "," << p.getY() << ")";
+        
+        if(i != points.size() - 1) {
+            outfile << " , ";
+        }
+    }
+    outfile << " Area = " << area << endl;
     outfile.close();
 }
 
@@ -521,7 +581,7 @@ void part1() {
 
     }
 
-    write_file(points);
+    write_file(points, "points.txt");
 
     // cleanup
 
@@ -540,7 +600,7 @@ vector<Point> read_file() {
     getline(file, contents);
     contents += " "; // makes it easier to parse the points
 
-    cout << contents << endl;
+    // cout << contents << endl;
 
     vector<int> spaces;
     for(int i = 0; i < contents.length(); i++) {
@@ -573,10 +633,12 @@ vector<Point> read_file() {
     return points;
 }
 
-vector<Point> get_smallest_square(vector<Point> points, int height, int width) {
+vector<Point> get_smallest_square(vector<Point> points, int height, int width, string filename) {
     // allocate memory for pixel array
     // cleaner to keep the data type as int** and dynamically allocate
     // rather than making it fixed width and passing around int[][size] in functions
+
+    write_file(points, filename);
 
     int **pixels;
     pixels = new int*[height];
@@ -590,9 +652,11 @@ vector<Point> get_smallest_square(vector<Point> points, int height, int width) {
         }
     }
 
+    vector<Point> ret;
+    vector<Line> best_lines;
+    double smallest_area = 2;
+
     // choose the first and second elements of points as the opposite points
-
-
     for(int idx = 0; idx < 3; idx++) {
         Point a;
         Point b;
@@ -681,48 +745,75 @@ vector<Point> get_smallest_square(vector<Point> points, int height, int width) {
             double side_length = f.distance(h);
             double area = side_length * side_length;
 
-            cout << "area for board " << idx * 2 + i << ": " << area << endl;
+            vector<Point> curr_points = {f, h, c1, g};
+            write_file_with_area(curr_points, area, filename);
 
-            // ab.draw_line(pixels);
-            // ab_perp.draw_line(pixels);
-            de.draw_line(pixels);
-            af.draw_line(pixels);
-            bg.draw_line(pixels);
-            ch.draw_line(pixels);
-
-            color_pixel(pixels, a, height, width);
-            color_pixel(pixels, b, height, width);
-            color_pixel(pixels, c, height, width);
-            color_pixel(pixels, d, height, width);
-            color_pixel(pixels, e, height, width);
-
-            write_board(pixels, height, width, to_string(idx * 2 + i));
-
-            // erase the board
-            for(int i = 0; i < height; i++) {
-                for(int j = 0; j < width; j++) {
-                    pixels[i][j] = 0;
-                }
+            if(area < smallest_area) {
+                ret = {f, h, c1, g};
+                best_lines = {de, af, bg, ch};
+                smallest_area = area;
             }
+
+            // cout << "area for board " << idx * 2 + i << ": " << area << endl;
+
+            // de.draw_line(pixels);
+            // af.draw_line(pixels);
+            // bg.draw_line(pixels);
+            // ch.draw_line(pixels);
+
+            // write_board(pixels, height, width, to_string(idx * 2 + i));
+
+            // // erase the board
+            // for(int i = 0; i < height; i++) {
+            //     for(int j = 0; j < width; j++) {
+            //         pixels[i][j] = 0;
+            //     }
+            // }
         }
     }
+
+    for(Line l : best_lines) {
+        l.draw_line(pixels);
+    }
+
+    for(Point p : points) {
+        Circle c(Point(p.getX() * width, p.getY() * height), 2.0, height, width);
+        c.draw_circle(pixels);
+    }
+
+    for(Point p : ret) {
+        Circle c(Point(p.getX() * width, p.getY() * height), 2.0, height, width);
+        c.draw_circle(pixels);
+    }
+
+    write_board(pixels, height, width, "");
+
+    // cleanup
+
+    for(int i = 0; i < height; i++) {
+        delete[] pixels[i];
+    }
+
+    delete[] pixels;
     
-    vector<Point> ret;
     return ret;
 }
 
 void part2() {
     vector<Point> points = read_file();
-    cout << setprecision(17);
+    // cout << setprecision(17);
 
-    for(auto i : points) {
-        cout << i.getX() << " " << i.getY() << endl;
-    }
+    // for(auto i : points) {
+    //     cout << i.getX() << " " << i.getY() << endl;
+    // }
 
-    get_smallest_square(points, 100, 100);
+    int height = 800;
+    int width = 800;
+
+    get_smallest_square(points, height, width, "output.txt");
 }
 
 int main() {
-    part1();
+    // part1();
     part2();
 }
