@@ -591,108 +591,121 @@ vector<Point> get_smallest_square(vector<Point> points, int height, int width) {
     }
 
     // choose the first and second elements of points as the opposite points
-    Point a = points[0];
-    Point b = points[1];
-    Point c = points[2]; // choose any perpendicular point
-    Point d = points[3];
 
-    Line ab = Line(a, b, height, width);
 
-    // draw line perpendicular to a through c
-    Line ab_perp = ab.make_perpendicular(c);
+    for(int idx = 0; idx < 3; idx++) {
+        Point a;
+        Point b;
+        Point c;
+        Point d;
+
+        // choose ab to start
+        if(idx == 0) {
+            a = points[0];
+            b = points[1];
+            c = points[2];
+            d = points[3];
+        }
+        // choose ac to start
+        else if(idx == 1) {
+            a = points[0];
+            b = points[2];
+            c = points[1];
+            d = points[3];
+        }
+        // choose ad to start
+        else {
+            a = points[0];
+            b = points[3];
+            c = points[2];
+            d = points[1];
+        }
     
-    // pick point e on line ab_perp such that ce is the same length as ab
 
-    double distance = a.distance(b);
-    cout << "distance " << distance << endl;
-    double delta_x;
-    double delta_y;
+        Line ab = Line(a, b, height, width);
 
-    if(ab_perp.getSlope() == 0) {
-        delta_x = distance;
-        delta_y = 0;
-    }
-    else if(ab_perp.getSlope() == DBL_MAX) {
-        delta_x = 0;
-        delta_y = distance;
-    }
-    else {
-        double vx = ab_perp.getSecond().getX() - ab_perp.getFirst().getX();
-        double vy = ab_perp.getSecond().getY() - ab_perp.getFirst().getY();
+        // draw line perpendicular to a through c
+        Line ab_perp = ab.make_perpendicular(c);
+        
+        // pick point e on line ab_perp such that ce is the same length as ab
 
-        cout << "vx vy " << vx << " " << vy << " " << ab_perp.getSlope() << endl; 
+        double distance = a.distance(b);
+        double delta_x;
+        double delta_y;
 
-        double ux = vx / ab_perp.getLength();
-        double uy = vy / ab_perp.getLength();
-
-        cout << "ux uy " << ux << " " << uy << endl; 
-
-
-        delta_x = ux * distance;
-        delta_y = uy * distance;
-
-    }
-    
-    // two squares: one with c + dx,dy, one with c - dx,dy
-
-    for(int i = 0; i < 2; i++) {
-        Point e;
-
-        if(i == 0) {
-            cout << "slkslslkslkslk    23409823409823409283409" <<endl;
-            e = Point(c.getX() + delta_x, c.getY() + delta_y);
+        if(ab_perp.getSlope() == 0) {
+            delta_x = distance;
+            delta_y = 0;
+        }
+        else if(ab_perp.getSlope() == DBL_MAX) {
+            delta_x = 0;
+            delta_y = distance;
         }
         else {
-            cout << "s1111111111111111111111111111111111111111111111111111111119" <<endl;
-            e = Point(c.getX() - delta_x, c.getY() - delta_y);
+            double vx = ab_perp.getSecond().getX() - ab_perp.getFirst().getX();
+            double vy = ab_perp.getSecond().getY() - ab_perp.getFirst().getY();
+
+            double ux = vx / ab_perp.getLength();
+            double uy = vy / ab_perp.getLength();
+
+            delta_x = ux * distance;
+            delta_y = uy * distance;
+
         }
 
-        cout << "dx dy cx cy " << delta_x << " " << delta_y << " " << c.getX() << " " << c.getY() << endl;
+        // two squares: one with c + dx,dy, one with c - dx,dy
 
-        Line ce(c, e, height, width);
-        Line de(d, e, height, width);
+        for(int i = 0; i < 2; i++) {
+            Point e;
 
-        Line af = de.make_perpendicular(a);
-        Line bg = de.make_perpendicular(b);
-        Line ch = af.make_perpendicular(c);
+            if(i == 0) {
+                e = Point(c.getX() + delta_x, c.getY() + delta_y);
+            }
+            else {
+                e = Point(c.getX() - delta_x, c.getY() - delta_y);
+            }
 
-        // from here, the square is FHC1G
-        Point f = af.find_intersection(de);
-        Point h = af.find_intersection(ch);
-        Point c1 = bg.find_intersection(ch);
-        Point g = bg.find_intersection(de);
+            Line ce(c, e, height, width);
+            Line de(d, e, height, width);
 
-        double side_length = f.distance(h);
-        double area = side_length * side_length;
+            Line af = de.make_perpendicular(a);
+            Line bg = de.make_perpendicular(b);
+            Line ch = af.make_perpendicular(c);
 
-        cout << "area " << area << endl;
+            // from here, the square is FHC1G
+            Point f = af.find_intersection(de);
+            Point h = af.find_intersection(ch);
+            Point c1 = bg.find_intersection(ch);
+            Point g = bg.find_intersection(de);
 
-        // ab.draw_line(pixels);
-        // ab_perp.draw_line(pixels);
-        de.draw_line(pixels);
-        af.draw_line(pixels);
-        bg.draw_line(pixels);
-        ch.draw_line(pixels);
+            double side_length = f.distance(h);
+            double area = side_length * side_length;
 
-        color_pixel(pixels, a, height, width);
-        color_pixel(pixels, b, height, width);
-        color_pixel(pixels, c, height, width);
-        color_pixel(pixels, d, height, width);
-        color_pixel(pixels, e, height, width);
+            cout << "area for board " << idx * 2 + i << ": " << area << endl;
 
-        cout << " e " << e.getX() << " " << e.getY() << endl;
-        cout << " ab ce dist " << ab.getLength() << " " << ce.getLength() << endl;
+            // ab.draw_line(pixels);
+            // ab_perp.draw_line(pixels);
+            de.draw_line(pixels);
+            af.draw_line(pixels);
+            bg.draw_line(pixels);
+            ch.draw_line(pixels);
 
-        write_board(pixels, height, width, to_string(i));
+            color_pixel(pixels, a, height, width);
+            color_pixel(pixels, b, height, width);
+            color_pixel(pixels, c, height, width);
+            color_pixel(pixels, d, height, width);
+            color_pixel(pixels, e, height, width);
 
-        // erase the board
-        for(int i = 0; i < height; i++) {
-            for(int j = 0; j < width; j++) {
-                pixels[i][j] = 0;
+            write_board(pixels, height, width, to_string(idx * 2 + i));
+
+            // erase the board
+            for(int i = 0; i < height; i++) {
+                for(int j = 0; j < width; j++) {
+                    pixels[i][j] = 0;
+                }
             }
         }
     }
-
     
     vector<Point> ret;
     return ret;
