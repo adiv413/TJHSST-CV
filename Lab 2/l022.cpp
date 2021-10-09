@@ -167,14 +167,6 @@ class Line {
                     // hits the top of the screen
                     scaled_second = Point(bottom_x, 0);
                 }
-
-                cout << "sfx sfy ssx ssy " << scaled_first.getX() << " " << scaled_first.getY() << " " << scaled_second.getX() << " " << scaled_second.getY() << endl;
-
-                cout << "ry tx ly bx " << right_y << " " << top_x << " " << left_y << " " << bottom_x << endl;
-                cout << "fx fy slope " << first.getX() * canvas_width << " " << first.getY() * canvas_height << " " << slope << endl;
-
-                // Point scaled_first((int) (first.getX() * canvas_width), (int) (first.getY() * canvas_height));
-                // Point scaled_second((int) (second.getX() * canvas_width), (int) (second.getY() * canvas_height));
             }
 
             int dx = scaled_second.getX() - scaled_first.getX(); // x2 - x1
@@ -625,10 +617,10 @@ vector<Point> get_smallest_square(vector<Point> points, int height, int width) {
         delta_y = distance;
     }
     else {
-        double vx = abs(ab_perp.getFirst().getX() - ab_perp.getSecond().getX());
-        double vy = abs(ab_perp.getFirst().getY() - ab_perp.getSecond().getY());
+        double vx = ab_perp.getSecond().getX() - ab_perp.getFirst().getX();
+        double vy = ab_perp.getSecond().getY() - ab_perp.getFirst().getY();
 
-        cout << "vx vy " << vx << " " << vy << " " << ab_perp.getLength() << endl; 
+        cout << "vx vy " << vx << " " << vy << " " << ab_perp.getSlope() << endl; 
 
         double ux = vx / ab_perp.getLength();
         double uy = vy / ab_perp.getLength();
@@ -641,77 +633,67 @@ vector<Point> get_smallest_square(vector<Point> points, int height, int width) {
 
     }
     
-    // positive slope -> +dx, +dy or -dx, -dy, negative slope -> +dx, -dy or -dx, +dy
-
-    if(ab_perp.getSlope() < 0) {
-        delta_y = -delta_y;
-    }
-
-    cout << "distance dx dy abperpslope " << distance << " " << delta_x << " " << delta_y << " " << ab_perp.getSlope() << endl;
-
     // two squares: one with c + dx,dy, one with c - dx,dy
 
-    Point e(c.getX() + delta_x, c.getY() + delta_y);
-    Line ce(c, e, height, width);
-    Line de(d, e, height, width);
+    for(int i = 0; i < 2; i++) {
+        Point e;
 
-    Line af = de.make_perpendicular(a);
-    Line bg = de.make_perpendicular(b);
+        if(i == 0) {
+            cout << "slkslslkslkslk    23409823409823409283409" <<endl;
+            e = Point(c.getX() + delta_x, c.getY() + delta_y);
+        }
+        else {
+            cout << "s1111111111111111111111111111111111111111111111111111111119" <<endl;
+            e = Point(c.getX() - delta_x, c.getY() - delta_y);
+        }
 
-    Point f = af.find_intersection(de);
-    Point g = bg.find_intersection(de);
+        cout << "dx dy cx cy " << delta_x << " " << delta_y << " " << c.getX() << " " << c.getY() << endl;
 
-    Line ch = af.make_perpendicular(c);
-    Point h = ch.find_intersection(af);
+        Line ce(c, e, height, width);
+        Line de(d, e, height, width);
 
-    // from here, the square is CHFG
+        Line af = de.make_perpendicular(a);
+        Line bg = de.make_perpendicular(b);
+        Line ch = af.make_perpendicular(c);
 
-    // ab.draw_line(pixels);
-    // ab_perp.draw_line(pixels);
-    de.draw_line(pixels);
-    af.draw_line(pixels);
-    bg.draw_line(pixels);
-    ch.draw_line(pixels);
+        // from here, the square is FHC1G
+        Point f = af.find_intersection(de);
+        Point h = af.find_intersection(ch);
+        Point c1 = bg.find_intersection(ch);
+        Point g = bg.find_intersection(de);
+
+        double side_length = f.distance(h);
+        double area = side_length * side_length;
+
+        cout << "area " << area << endl;
+
+        // ab.draw_line(pixels);
+        // ab_perp.draw_line(pixels);
+        de.draw_line(pixels);
+        af.draw_line(pixels);
+        bg.draw_line(pixels);
+        ch.draw_line(pixels);
+
+        color_pixel(pixels, a, height, width);
+        color_pixel(pixels, b, height, width);
+        color_pixel(pixels, c, height, width);
+        color_pixel(pixels, d, height, width);
+        color_pixel(pixels, e, height, width);
+
+        cout << " e " << e.getX() << " " << e.getY() << endl;
+        cout << " ab ce dist " << ab.getLength() << " " << ce.getLength() << endl;
+
+        write_board(pixels, height, width, to_string(i));
+
+        // erase the board
+        for(int i = 0; i < height; i++) {
+            for(int j = 0; j < width; j++) {
+                pixels[i][j] = 0;
+            }
+        }
+    }
+
     
-
-    Line hf(h, f, height, width);
-    Line fg(f, g, height, width);
-    Line cg(c, g, height, width);
-
-    // ch.draw_line(pixels);
-    // hf.draw_line(pixels);
-    // fg.draw_line(pixels);
-    // cg.draw_line(pixels);
-
-    color_pixel(pixels, a, height, width);
-    color_pixel(pixels, b, height, width);
-    color_pixel(pixels, c, height, width);
-    color_pixel(pixels, d, height, width);
-    color_pixel(pixels, e, height, width);
-
-    cout << " e " << e.getX() << " " << e.getY() << endl;
-    cout << " ab ce dist " << ab.getLength() << " " << ce.getLength() << endl;
-
-    // color_pixel(pixels, c, height, width);
-    // color_pixel(pixels, f, height, width);
-    // color_pixel(pixels, g, height, width);
-    // color_pixel(pixels, h, height, width);
-
-    // cout << c.getX() * width << " " << c.getY() * height << " sdlk" << endl;
-    // cout << f.getX() * width << " " << f.getY() * height << " sdlk" << endl;
-    // cout << g.getX() * width << " " << g.getY() * height << " sdlk" << endl;
-    // cout << h.getX() * width << " " << h.getY() * height << " sdlk" << endl;
-
-    // cout << ch.getSlope() << " sdlkfj " << af.getSlope() << endl;
-
-
-
-
-
-
-    e = Point(c.getX() - delta_x, c.getY() - delta_y);
-
-    write_board(pixels, height, width, to_string(1));
     vector<Point> ret;
     return ret;
 }
