@@ -14,8 +14,11 @@
 #include <iomanip>
 #include <list>
 #include <iterator>
+#include <chrono>
 
 using namespace std;
+
+double total_time = 0;
 
 class Point {
     private:
@@ -184,17 +187,7 @@ vector<Point> read_file() {
     ifstream file;
     file.open("points.txt");
     string contents;
-
-    // cout << contents << endl;
-
-    // vector<int> spaces;
-    // for(int i = 0; i < contents.length() - 1; i++) {
-    //     if(string(2, contents[i]) == "  ") {
-    //         spaces.push_back(i);
-    //     }
-    // }
-
-    // int prev = 0;
+    
     vector<Point> points;
 
     while(getline(file, contents)) {
@@ -222,28 +215,6 @@ vector<Point> read_file() {
         points.push_back(Point(x, y));
 
     }
-
-    
-
-
-
-    // for(int i : spaces) {
-    //     string point_str = contents.substr(prev, i - prev);
-    //     prev = i;
-
-    //     if(point_str.find("(") == string::npos) {
-    //         continue;
-    //     }
-        
-    //     int left = point_str.find("(");
-    //     int center = point_str.find(",");
-    //     int right = point_str.find(")");
-
-    //     double x = stod(point_str.substr(left + 1, center - left - 1));
-    //     double y = stod(point_str.substr(center + 1, right - center - 1));
-
-    //     points.push_back(Point(x, y));
-    // }
 
     return points;
 }
@@ -274,7 +245,7 @@ void part1() {
     // temporary, used for drawing only
     int height = 800;
     int width = 800; 
-    int num_points = 60;
+    int num_points = 1700;
     list<Point> points;   
 
     // allocate memory for pixel array
@@ -355,6 +326,8 @@ PointPair recur(int left, int right, vector<Point>& points) {
     PointPair pp1 = recur(left, center, points);
     PointPair pp2 = recur(center, right, points);
 
+    // long double start = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+
     PointPair absolute_min = pp1;
 
     if(pp1.getDistance() > pp2.getDistance()) {
@@ -363,47 +336,44 @@ PointPair recur(int left, int right, vector<Point>& points) {
 
     // check band of length absolute_min.getDistance()
 
-    list<Point> band_points;
-    double distance = absolute_min.getDistance();
+    list<Point> band_points_left;
+    list<Point> band_points_right;
 
-    for(int i = center; i >= 0; i--) {
+    double distance = absolute_min.getDistance();   
+
+    for(int i = center; i >= left; i--) {
         if(abs(points[i].getX() - points[center].getX()) < distance) {
-            band_points.push_back(points[i]);
+            band_points_left.push_back(points[i]);
         }
         else {
             break;
         }
     }
 
-    for(int i = center + 1; i < points.size(); i++) {
+    for(int i = center + 1; i <= right; i++) {
         if(abs(points[i].getX() - points[center].getX()) < distance) {
-            band_points.push_back(points[i]);
+            band_points_right.push_back(points[i]);
         }
         else {
             break;
         }
     }
 
+    if((band_points_left.size() > 1) && (band_points_right.size() > 1)) {
+        PointPair band_min(band_points_left.front(), band_points_right.front(), band_points_left.front().distance(band_points_right.front()));
 
-    if(band_points.size() > 2) {
-        PointPair minimum(band_points.front(), band_points.back(), band_points.front().distance(band_points.back()));
-        int count = 1;
+        for(Point i : band_points_left) {
+            for(Point j : band_points_right) {
+                double dist = i.distance(j);
 
-        for(list<Point>::iterator i = band_points.begin(); i != band_points.end(); ++i, count++) {
-            list<Point>::iterator j = band_points.begin();
-            advance(j, count);
-
-            for(; j != band_points.end(); ++j) {
-                double dist = i->distance(*j);
-                
-                if(dist < minimum.getDistance()) {
-                    minimum = PointPair(*i, *j, dist);
+                if(dist < band_min.getDistance()) {
+                    band_min = PointPair(i, j, dist);
                 }
             }
         }
         
-        if(minimum.getDistance() < absolute_min.getDistance()) {
-            return minimum;
+        if(band_min.getDistance() < absolute_min.getDistance()) {
+            return band_min;
         }
         else {
             return absolute_min;
@@ -426,12 +396,23 @@ void part2() {
         li_points.push_back(p);
     }
 
+    long double curr_time = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
     PointPair bf_minimum = brute_force(li_points);
+    long double curr_time1 = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+
+    cout << "elapsed time bf " << (curr_time1 - curr_time) / 1000.0 << endl;
+
+    long double curr_time2 = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
     PointPair recur_minimum = recur(0, points.size() - 1, points);
+    long double curr_time3 = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
      
+    cout << "elapsed time recursion " << (curr_time3 - curr_time2) / 1000.0 << endl;
+    cout << time(NULL) << endl;
+
+
     cout << bf_minimum.getDistance() << " " << bf_minimum.getFirst().getX() << " " << bf_minimum.getFirst().getY() << bf_minimum.getSecond().getX() << " " << bf_minimum.getSecond().getY() << endl;
     cout << recur_minimum.getDistance() << " " << recur_minimum.getFirst().getX() << " " << recur_minimum.getFirst().getY() << recur_minimum.getSecond().getX() << " " << recur_minimum.getSecond().getY() << endl;
-
+    cout << " total time " << total_time << endl;
 }
 
 int main() {
