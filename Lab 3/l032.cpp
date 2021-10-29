@@ -15,6 +15,7 @@
 #include <list>
 #include <iterator>
 #include <chrono>
+#include <sstream>
 
 using namespace std;
 
@@ -239,13 +240,13 @@ PointPair brute_force(list<Point> points) {
     return minimum;
 }
 
-void part1() {
+string part1() {
     srand((unsigned) time(0));
 
     // temporary, used for drawing only
     int height = 800;
     int width = 800; 
-    int num_points = 1700;
+    int num_points = 60;
     list<Point> points;   
 
     // allocate memory for pixel array
@@ -272,7 +273,19 @@ void part1() {
 
     // find minimum distance between points using brute-force algorithm
 
+    long double curr_time = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
     PointPair minimum = brute_force(points);
+    long double curr_time1 = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+
+    stringstream outfile_text;
+
+    outfile_text << std::fixed << std::showpoint;
+    outfile_text << setprecision(23);
+
+    // write to file
+    outfile_text << "Brute Force: " << endl;
+    outfile_text << "Distance: " << minimum.getDistance() << ", Point 1: (" << minimum.getFirst().getX() << ", " << minimum.getFirst().getY() << "), Point 2: (" << minimum.getSecond().getX() << ", " << minimum.getSecond().getY() << ")" << endl;
+    outfile_text << "Time: " << (curr_time1 - curr_time) / 1000.0 << " seconds" << endl;
 
     for(Point p : points) {
         Circle pt_circle(p, 3, height, width);
@@ -300,6 +313,8 @@ void part1() {
     }
 
     delete[] pixels;
+    cout << outfile_text.str() << endl;
+    return outfile_text.str();
 }
 
 bool compare_point_by_x(Point x, Point y) {
@@ -384,38 +399,46 @@ PointPair recur(int left, int right, vector<Point>& points) {
     }
 }
 
-void part2() {
+string part2() {
     vector<Point> points = read_file();
     cout << std::fixed << std::showpoint;
     cout << setprecision(23);
 
+    long double curr_time2 = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+
     sort(points.begin(), points.end(), compare_point_by_x);
 
     list<Point> li_points;
-    for(auto p : points) {
-        li_points.push_back(p);
+    for(vector<Point>::iterator i = points.begin(); i != points.end(); ++i) {
+        li_points.push_back(*i);
     }
 
-    long double curr_time = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-    PointPair bf_minimum = brute_force(li_points);
-    long double curr_time1 = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-
-    cout << "elapsed time bf " << (curr_time1 - curr_time) / 1000.0 << endl;
-
-    long double curr_time2 = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
     PointPair recur_minimum = recur(0, points.size() - 1, points);
     long double curr_time3 = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
      
-    cout << "elapsed time recursion " << (curr_time3 - curr_time2) / 1000.0 << endl;
-    cout << time(NULL) << endl;
+    stringstream outfile;
 
+    outfile << std::fixed << std::showpoint;
+    outfile << setprecision(23);
 
-    cout << bf_minimum.getDistance() << " " << bf_minimum.getFirst().getX() << " " << bf_minimum.getFirst().getY() << bf_minimum.getSecond().getX() << " " << bf_minimum.getSecond().getY() << endl;
-    cout << recur_minimum.getDistance() << " " << recur_minimum.getFirst().getX() << " " << recur_minimum.getFirst().getY() << recur_minimum.getSecond().getX() << " " << recur_minimum.getSecond().getY() << endl;
-    cout << " total time " << total_time << endl;
+    // write to file
+    outfile << "Intermediate Recursive: " << endl;
+    outfile << "Distance: " << recur_minimum.getDistance() << ", Point 1: (" << recur_minimum.getFirst().getX() << ", " << recur_minimum.getFirst().getY() << "), Point 2: (" << recur_minimum.getSecond().getX() << ", " << recur_minimum.getSecond().getY() << ")" << endl;
+    outfile << "Time: " << (curr_time3 - curr_time2) / 1000.0 << " seconds" << endl;
+
+    cout << outfile.str() << endl;
+    return outfile.str();
 }
 
 int main() {
-    part1();
-    part2();
+    string part1_output = part1();
+    string part2_output = part2();
+
+    ofstream outfile;
+    outfile.open("results.txt");
+
+    outfile << part1_output << endl;
+    outfile << part2_output << endl;
+    
+    outfile.close();
 }
