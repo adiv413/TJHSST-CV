@@ -384,14 +384,13 @@ PointPair recur(int left, int right, vector<Point>& points) {
 
     // check band of length absolute_min.getDistance()
 
-    list<Point> band_points_left;
-    list<Point> band_points_right;
+    vector<Point> band_points;
 
     double distance = absolute_min.getDistance();   
 
     for(int i = center; i >= left; i--) {
         if(abs(points[i].getX() - points[center].getX()) < distance) {
-            band_points_left.push_back(points[i]);
+            band_points.push_back(points[i]);
         }
         else {
             break;
@@ -400,28 +399,33 @@ PointPair recur(int left, int right, vector<Point>& points) {
 
     for(int i = center + 1; i <= right; i++) {
         if(abs(points[i].getX() - points[center].getX()) < distance) {
-            band_points_right.push_back(points[i]);
+            band_points.push_back(points[i]);
         }
         else {
             break;
         }
     }
 
-    if((band_points_left.size() > 1) && (band_points_right.size() > 1)) {
-        PointPair band_min(band_points_left.front(), band_points_right.front(), band_points_left.front().distance(band_points_right.front()));
 
-        for(Point i : band_points_left) {
-            for(Point j : band_points_right) {
-                double dist = i.distance(j);
+    if(band_points.size() > 1) {
+        PointPair band_minimum(band_points.front(), band_points.back(), band_points.front().distance(band_points.back()));
+        int count = 1;
 
-                if(dist < band_min.getDistance()) {
-                    band_min = PointPair(i, j, dist);
+        for(vector<Point>::iterator i = band_points.begin(); i != band_points.end(); ++i, count++) {
+            vector<Point>::iterator j = band_points.begin();
+            advance(j, count);
+
+            for(; j != band_points.end(); ++j) {
+                double dist = i->distance(*j);
+                
+                if(dist < band_minimum.getDistance()) {
+                    band_minimum = PointPair(*i, *j, dist);
                 }
             }
         }
         
-        if(band_min.getDistance() < absolute_min.getDistance()) {
-            return band_min;
+        if(band_minimum.getDistance() < absolute_min.getDistance()) {
+            return band_minimum;
         }
         else {
             return absolute_min;
@@ -482,7 +486,7 @@ PointPair recur_complete(int left, int right, vector<Point>& points) {
         }
     }
 
-    if((band_points.size() > 1) && (band_points.size() > 1)) {
+    if(band_points.size() > 1) {
         sort(band_points.begin(), band_points.end(), compare_point_by_y);
         PointPair band_minimum(band_points.front(), band_points.back(), band_points.front().distance(band_points.back()));
         int count = 1;
