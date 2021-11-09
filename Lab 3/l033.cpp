@@ -246,7 +246,7 @@ string part1() {
     // temporary, used for drawing only
     int height = 800;
     int width = 800; 
-    int num_points = 100000;
+    int num_points = 400000;
     list<Point> points;   
 
     // allocate memory for pixel array
@@ -460,7 +460,7 @@ PointPair recur_complete(int left, int right, vector<Point>& points) {
 
     // check band of length absolute_min.getDistance()
 
-    list<Point> band_points;
+    vector<Point> band_points;
 
     double distance = absolute_min.getDistance();   
 
@@ -483,12 +483,12 @@ PointPair recur_complete(int left, int right, vector<Point>& points) {
     }
 
     if((band_points.size() > 1) && (band_points.size() > 1)) {
-        band_points.sort(compare_point_by_y);
+        sort(band_points.begin(), band_points.end(), compare_point_by_y);
         PointPair band_minimum(band_points.front(), band_points.back(), band_points.front().distance(band_points.back()));
         int count = 1;
 
-        for(list<Point>::iterator i = band_points.begin(); i != band_points.end(); ++i, count++) {
-            list<Point>::iterator j = band_points.begin();
+        for(vector<Point>::iterator i = band_points.begin(); i != band_points.end(); ++i, count++) {
+            vector<Point>::iterator j = band_points.begin();
             advance(j, count);
 
             for(int inner_count = 1; j != band_points.end() && inner_count <= 15; ++j, inner_count++) {
