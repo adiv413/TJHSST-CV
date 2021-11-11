@@ -246,7 +246,7 @@ string part1() {
     // temporary, used for drawing only
     int height = 800;
     int width = 800; 
-    int num_points = 400000;
+    int num_points = 3000000;
     list<Point> points;   
 
     // allocate memory for pixel array
