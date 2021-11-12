@@ -569,7 +569,7 @@ string part3() {
 }
 
 int main() {
-    string part1_output = part1();
+    // string part1_output = part1();
     string part2_output = part2();
     string part3_output = part3();
 
