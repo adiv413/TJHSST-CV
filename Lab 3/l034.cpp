@@ -250,7 +250,7 @@ string part1() {
     // temporary, used for drawing only
     int height = 800;
     int width = 800; 
-    int num_points = 200000;
+    int num_points = 5000000;
     list<Point> points;   
 
     // allocate memory for pixel array
@@ -583,7 +583,18 @@ public:
     }
 };
 
-PointPair recur_random(vector<Point>& points) {
+PointPair random_algo(vector<Point>& points) {
+
+    // use knuth shuffle to randomize points
+    for(int i = points.size() - 1; i > 0; i--) {
+        int j = rand() % (i + 1);
+
+        // swap points[i] and points[j]
+        Point temp = points[i];
+        points[i] = points[j];
+        points[j] = temp;
+    }
+
     ld delta = points[0].distance(points[1]);
     PointPair minimum(points[0], points[1], delta);
 
@@ -634,7 +645,7 @@ string part4() {
 
     long double curr_time2 = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 
-    PointPair recur_minimum = recur_random(points);
+    PointPair recur_minimum = random_algo(points);
     long double curr_time3 = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
     
     stringstream outfile;
@@ -652,7 +663,7 @@ string part4() {
 }
 
 int main() {
-    string part1_output = part1();
+    // string part1_output = part1();
     // string part2_output = part2();
     string part3_output = part3();
     string part4_output = part4();
