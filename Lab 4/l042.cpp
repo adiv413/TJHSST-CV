@@ -818,12 +818,28 @@ void graham_scan(vector<Point> points) {
         s.push(current);
     }
 
+    Point prev = s.top();
+    Point tp = prev;
+    s.pop();
+
+    Circle c1(prev, 2, height, width, Color::RED);
+    c1.draw_circle(pixels);
+
     while(!s.empty()) {
-        Point p = s.top();
+        Point p1 = s.top();
         s.pop();
-        Circle c(p, 4, height, width, Color::RED);
-        c.draw_circle(pixels);
+
+        Line l(prev, p1, height, width);
+        l.draw_line(pixels);
+
+        Circle c1(p1, 2, height, width, Color::RED);
+        c1.draw_circle(pixels);
+
+        prev = p1;
     }
+
+    Line l1(prev, tp, height, width);
+    l1.draw_line(pixels);
 
     write_board(pixels, height, width, "grahamscan");
 
@@ -835,7 +851,6 @@ void graham_scan(vector<Point> points) {
 }
 
 void part2() {
-    generate_points(60);
     vector<Point> points = read_file();
     graham_scan(points);
 }
