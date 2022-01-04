@@ -79,30 +79,18 @@ vector<vector<Pixel>> readPPM(string infile) {
 
     for (int i = 0; i < height; i++) {
         for (int j = 0; j < width; j++) {
-            // cout << i << " " << j << endl;
             int r, g, b;
             inp >> r >> g >> b;
             pixels[i][j] = Pixel(r, g, b);
         }
     }
 
-    cout << pixels.size() << " " << pixels[0].size() << endl;
-
     return pixels;
 }
 
-int main() {
+void part1() {
     // read in the ppm file
     vector<vector<Pixel>> pixels = readPPM("image.ppm");
-
-    // print out pixels
-    for(int i = 0; i < 10; i++) {
-        for(int j = 0; j < 10; j++) {
-            cout << pixels[i][j].getR() << " " << pixels[i][j].getG() << " " << pixels[i][j].getB() << " ";
-        }
-        cout << endl;
-    }
-    
 
     // grayscale pixels
     for(int i = 0; i < pixels.size(); i++) {
@@ -115,7 +103,7 @@ int main() {
         }
     }
 
-    // output pixels to imageg.ppm
+    // output grayscaled image to imageg.ppm
     ofstream out("imageg.ppm");
     out << "P3" << endl;
     out << width << " " << height << endl;
@@ -127,15 +115,90 @@ int main() {
         out << endl;
     }
     out.close();
-    
-    
 
-    // implement canny edge detection with a sobel filter and gaussian blur on pixels
-    // use a 3x3 sobel filter
-    // use a gaussian blur with a sigma of 1.0
-    // use a threshold of 0.5
-    // use a non-maximum suppression
-    // use a hysteresis threshold of 0.5
-    // write the output to a new ppm file
+    // add zero padding=1 in preperation for convulution
+    pixels.insert(pixels.begin(), vector<Pixel>(width, Pixel(0, 0, 0)));
+    pixels.push_back(vector<Pixel>(width, Pixel(0, 0, 0)));
+
+    for(int i = 0; i < pixels.size(); i++) {
+        pixels[i].insert(pixels[i].begin(), Pixel(0, 0, 0));
+        pixels[i].push_back(Pixel(0, 0, 0));
+    }
+
+    // x convolution
     
+    vector<vector<Pixel>> x_edges(height, vector<Pixel>(width, Pixel(0, 0, 0)));
+    vector<vector<int>> x_kernel = {{1, 0, -1}, {2, 0, -2}, {1, 0, -1}};
+
+    for(int i = 1; i < height + 1; i++) {
+        for(int j = 1; j < width + 1; j++) {
+            int value = 0;
+
+            for(int k = 0; k <= 2; k++) {
+                for(int l = 0; l <= 2; l++) {
+                    value += pixels[i + (k - 1)][j + (l - 1)].getR() * x_kernel[k][l]; // we can use getR because it's all the same after grayscaling
+                }
+            }
+
+            x_edges[i - 1][j - 1] = Pixel(value, value, value);
+        }
+    }
+
+    // y convolution
+    
+    vector<vector<Pixel>> y_edges(height, vector<Pixel>(width, Pixel(0, 0, 0)));
+    vector<vector<int>> y_kernel = {{1, 2, 1}, {0, 0, 0}, {-1, -2, -1}};
+
+    for(int i = 1; i < height + 1; i++) {
+        for(int j = 1; j < width + 1; j++) {
+            int value = 0;
+
+            for(int k = 0; k <= 2; k++) {
+                for(int l = 0; l <= 2; l++) {
+                    value += pixels[i + (k - 1)][j + (l - 1)].getR() * y_kernel[k][l]; // we can use getR because it's all the same after grayscaling
+                }
+            }
+
+            y_edges[i - 1][j - 1] = Pixel(value, value, value);
+        }
+    }
+
+    // combine x and y edges
+    vector<vector<Pixel>> edges(height, vector<Pixel>(width, Pixel(0, 0, 0)));
+    for(int i = 0; i < height; i++) {
+        for(int j = 0; j < width; j++) {
+            int value = sqrt(x_edges[i][j].getR() * x_edges[i][j].getR() + y_edges[i][j].getR() * y_edges[i][j].getR());
+            edges[i][j] = Pixel(value, value, value);
+        }
+    }
+
+    // thresholding
+    int threshold = 200;
+
+    for(int i = 0; i < height; i++) {
+        for(int j = 0; j < width; j++) {
+            if(edges[i][j].getR() > threshold) {
+                edges[i][j] = Pixel(255, 255, 255);
+            } else {
+                edges[i][j] = Pixel(0, 0, 0);
+            }
+        }
+    }
+
+    // output edge detections to imagem.ppm
+    ofstream out2("imagem.ppm");
+    out2 << "P3" << endl;
+    out2 << width << " " << height << endl;
+    out2 << "255" << endl;
+    for(int i = 0; i < height; i++) {
+        for(int j = 0; j < width; j++) {
+            out2 << edges[i][j].getR() << " " << edges[i][j].getG() << " " << edges[i][j].getB() << " ";
+        }
+        out2 << endl;
+    }
+    out2.close();
+}
+
+int main() {
+    part1();
 }
