@@ -74,7 +74,6 @@ vector<vector<Pixel>> readPPM(string infile) {
 
 
     vector<vector<Pixel>> pixels(height, vector<Pixel>(width, Pixel(0, 0, 0)));
-    cout << width << " " << height<< endl;
     // fill pixels with all pixels in the ppm
 
     for (int i = 0; i < height; i++) {
@@ -145,7 +144,6 @@ void part1() {
     }
 
     // y convolution
-    
     vector<vector<Pixel>> y_edges(height, vector<Pixel>(width, Pixel(0, 0, 0)));
     vector<vector<int>> y_kernel = {{1, 2, 1}, {0, 0, 0}, {-1, -2, -1}};
 
