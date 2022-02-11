@@ -392,62 +392,46 @@ vector<vector<Pixel>> readPPM(string infile) {
     return pixels;
 }
 
-void hysteresis(vector<vector<Pixel>> &pixels, int i, int j) {
-    if(pixels[i][j].getR() == 128) {
+void hysteresis(vector<vector<Pixel>> &pixels, int i, int j, vector<vector<int>> &visited) {
+    if(pixels[i][j].getR() != 0 && visited[i][j] != 1) {
         if(i + 1 < pixels.size()) {
-            if(pixels[i + 1][j].getR() == 255) {
-                pixels[i][j] = Pixel(255, 255, 255);
-                hysteresis(pixels, i + 1, j);
-            }
+            visited[i][j] = 1;
+            hysteresis(pixels, i + 1, j, visited);
         }
         if(i - 1 >= 0) {
-            if(pixels[i - 1][j].getR() == 255) {
-                pixels[i][j] = Pixel(255, 255, 255);
-                hysteresis(pixels, i - 1, j);
-            }
+            visited[i][j] = 1;
+            hysteresis(pixels, i - 1, j, visited);
         }
         if(j + 1 < pixels[0].size()) {
-            if(pixels[i][j + 1].getR() == 255) {
-                pixels[i][j] = Pixel(255, 255, 255);
-                hysteresis(pixels, i, j + 1);
-            }
+            visited[i][j] = 1;
+            hysteresis(pixels, i, j + 1, visited);
         }
         if(j - 1 >= 0) {
-            if(pixels[i][j - 1].getR() == 255) {
-                pixels[i][j] = Pixel(255, 255, 255);
-                hysteresis(pixels, i, j - 1);
-            }
+            visited[i][j] = 1;
+            hysteresis(pixels, i, j - 1, visited);
         }
         if(i + 1 < pixels.size() && j + 1 < pixels[0].size()) {
-            if(pixels[i + 1][j + 1].getR() == 255) {
-                pixels[i][j] = Pixel(255, 255, 255);
-                hysteresis(pixels, i + 1, j + 1);
-            }
+            visited[i][j] = 1;
+            hysteresis(pixels, i + 1, j + 1, visited);
         }
         if(i - 1 >= 0 && j - 1 >= 0) {
-            if(pixels[i - 1][j - 1].getR() == 255) {
-                pixels[i][j] = Pixel(255, 255, 255);
-                hysteresis(pixels, i - 1, j - 1);
-            }
+            visited[i][j] = 1;
+            hysteresis(pixels, i - 1, j - 1, visited);
         }
         if(i + 1 < pixels.size() && j - 1 >= 0) {
-            if(pixels[i + 1][j - 1].getR() == 255) {
-                pixels[i][j] = Pixel(255, 255, 255);
-                hysteresis(pixels, i + 1, j - 1);
-            }
+            visited[i][j] = 1;
+            hysteresis(pixels, i + 1, j - 1, visited);
         }
         if(i - 1 >= 0 && j + 1 < pixels[0].size()) {
-            if(pixels[i - 1][j + 1].getR() == 255) {
-                pixels[i][j] = Pixel(255, 255, 255);
-                hysteresis(pixels, i - 1, j + 1);
-            }
+            visited[i][j] = 1;
+            hysteresis(pixels, i - 1, j + 1, visited);
         }
     }
 }
 
 void part1(int threshold1 = 100, int threshold2 = 200, string filename = "image.ppm", int center_threshold = 300) {
-    cout << "sdklf" << center_threshold << endl;
-    cout << "sssssssssssssssssssssssssssssssssssssss" << endl;
+    // cout << "sdklf" << center_threshold << endl;
+    // cout << "sssssssssssssssssssssssssssssssssssssss" << endl;
     const long double pi = 3.14159265358979323846;
 
     // read in the ppm file
@@ -483,7 +467,7 @@ void part1(int threshold1 = 100, int threshold2 = 200, string filename = "image.
     };
 
     for(int i = 1; i < height + 1; i++) {
-        cout << "doing row " << i << endl;
+        // cout << "doing row " << i << endl;
         for(int j = 1; j < width + 1; j++) {
             int value = 0;
 
@@ -510,7 +494,7 @@ void part1(int threshold1 = 100, int threshold2 = 200, string filename = "image.
     // x convolution
     
     vector<vector<Pixel>> x_edges(height, vector<Pixel>(width, Pixel(0, 0, 0)));
-    vector<vector<int>> x_kernel = {{1, 0, -1}, {2, 0, -2}, {1, 0, -1}};
+    vector<vector<int>> x_kernel = {{-1, 0, 1}, {-2, 0, 2}, {-1, 0, 1}};
 
     for(int i = 1; i < height + 1; i++) {
         for(int j = 1; j < width + 1; j++) {
@@ -525,7 +509,7 @@ void part1(int threshold1 = 100, int threshold2 = 200, string filename = "image.
             x_edges[i - 1][j - 1] = Pixel(value, value, value);
         }
     }
-    cout << "sdklkkkkkkkkkkkkkkk " << endl;
+    // cout << "sdklkkkkkkkkkkkkkkk " << endl;
 
     // y convolution
     vector<vector<Pixel>> y_edges(height, vector<Pixel>(width, Pixel(0, 0, 0)));
@@ -561,7 +545,7 @@ void part1(int threshold1 = 100, int threshold2 = 200, string filename = "image.
     for(int i = 0; i < height; i++) {
         for(int j = 0; j < width; j++) {
             double angle = atan2(y_edges[i][j].getR(), x_edges[i][j].getR()) * 180 / pi;
-            if(-180.0 <= angle && angle >= -157.5) {
+            if(angle <= -157.5) {
                 angles[i][j] = 0;
             }
             else if(-157.5 <= angle && angle <= -112.5) {
@@ -585,7 +569,7 @@ void part1(int threshold1 = 100, int threshold2 = 200, string filename = "image.
             else if(112.5 <= angle && angle <= 157.5) {
                 angles[i][j] = 135;
             }
-            else {
+            else if(angle >= 157.5) {
                 angles[i][j] = 0;
             }
         }
@@ -594,42 +578,6 @@ void part1(int threshold1 = 100, int threshold2 = 200, string filename = "image.
     for(int i = 0; i < height; i++) {
         for(int j = 0; j < width; j++) {
             if(angles[i][j] == 0) {
-                int max = 0;
-
-                if(i > 0) {
-                    if(edges[i - 1][j].getR() > max) {
-                        max = edges[i - 1][j].getR();
-                    }
-                }
-                if(i < height - 1) {
-                    if(edges[i + 1][j].getR() > max) {
-                        max = edges[i + 1][j].getR();
-                    }
-                }
-
-                if(edges[i][j].getR() < max) {
-                    edges[i][j] = Pixel(0, 0, 0);
-                }
-            }
-            else if(angles[i][j] == 45) {
-                int max = 0;
-
-                if(i > 0 && j > 0) {
-                    if(edges[i - 1][j - 1].getR() > max) {
-                        max = edges[i - 1][j - 1].getR();
-                    }
-                }
-                if(i < height - 1 && j < width - 1) {
-                    if(edges[i + 1][j + 1].getR() > max) {
-                        max = edges[i + 1][j + 1].getR();
-                    }
-                }
-
-                if(edges[i][j].getR() < max) {
-                    edges[i][j] = Pixel(0, 0, 0);
-                }
-            }
-            else if(angles[i][j] == 90) {
                 int max = 0;
 
                 if(j > 0) {
@@ -647,17 +595,53 @@ void part1(int threshold1 = 100, int threshold2 = 200, string filename = "image.
                     edges[i][j] = Pixel(0, 0, 0);
                 }
             }
-            else if(angles[i][j] == 135) {
+            else if(angles[i][j] == 45) {
                 int max = 0;
 
+                if(i < height - 1 && j > 0) {
+                    if(edges[i + 1][j - 1].getR() > max) {
+                        max = edges[i + 1][j - 1].getR();
+                    }
+                }
                 if(i > 0 && j < width - 1) {
                     if(edges[i - 1][j + 1].getR() > max) {
                         max = edges[i - 1][j + 1].getR();
                     }
                 }
-                if(i < height - 1 && j > 0) {
-                    if(edges[i + 1][j - 1].getR() > max) {
-                        max = edges[i + 1][j - 1].getR();
+
+                if(edges[i][j].getR() < max) {
+                    edges[i][j] = Pixel(0, 0, 0);
+                }
+            }
+            else if(angles[i][j] == 90) {
+                int max = 0;
+
+                if(i > 0) {
+                    if(edges[i - 1][j].getR() > max) {
+                        max = edges[i - 1][j].getR();
+                    }
+                }
+                if(i < height - 1) {
+                    if(edges[i + 1][j].getR() > max) {
+                        max = edges[i + 1][j].getR();
+                    }
+                }
+
+                if(edges[i][j].getR() < max) {
+                    edges[i][j] = Pixel(0, 0, 0);
+                }
+            }
+            else if(angles[i][j] == 135) {
+                int max = 0;
+
+                if(i < height - 1 && j < width - 1) {
+                    if(edges[i + 1][j + 1].getR() > max) {
+                        max = edges[i + 1][j + 1].getR();
+                    }
+                }
+                if(i > 0 && j > 0) {
+                    if(edges[i - 1][j - 1].getR() > max) {
+                        max = edges[i - 1][j - 1].getR();
                     }
                 }
 
@@ -684,18 +668,41 @@ void part1(int threshold1 = 100, int threshold2 = 200, string filename = "image.
         }
     }
 
+    // vector<vector<int>> visited(height, vector<int>(width, 0));
+    // vector<vector<Pixel>> new_edges(height, vector<Pixel>(width, Pixel(0, 0, 0)));
+
+
+    vector<vector<int>> visited(height, vector<int>(width, 0));
+
     for(int i = 0; i < height; i++) {
         for(int j = 0; j < width; j++) {
-            hysteresis(edges, i, j);
+            if(edges[i][j].getR() == 255) {
+                hysteresis(edges, i, j, visited);
+            }
         }
     }
+
     for(int i = 0; i < height; i++) {
         for(int j = 0; j < width; j++) {
-            if(edges[i][j].getR() == 128) {
+            if(visited[i][j] == 1) {
+                edges[i][j] = Pixel(255, 255, 255);
+            }
+            else {
                 edges[i][j] = Pixel(0, 0, 0);
             }
         }
     }
+
+    // for(int i = 0; i < height; i++) {
+    //     for(int j = 0; j < width; j++) {
+    //         if(visited[i][j] == 1) {
+    //             edges[i][j] = Pixel(255, 255, 255);
+    //         }
+    //         else {
+    //             edges[i][j] = Pixel(0, 0, 0);
+    //         }
+    //     }
+    // }
 
     for(int j = 0; j < width; j++) {
         edges[0][j] = Pixel(0, 0, 0);
@@ -761,46 +768,47 @@ void part1(int threshold1 = 100, int threshold2 = 200, string filename = "image.
         }
     }
 
-    cout << "Voting..." << endl;
+    // cout << "Voting..." << endl;
 
     // for(int i = 0; i < )
 
     for(int i = 0; i < height; i++) {
         for(int j = 0; j < width; j++) {
-            double angle = atan2(y_edges[i][j].getR(), x_edges[i][j].getR()) * 180 / pi;
+            if(edges[i][j].getR() != 0) { 
+                double angle = atan2(y_edges[i][j].getR(), x_edges[i][j].getR()) * 180 / pi;
+                // cout << "angle " << angle << endl;
+                // cout << "x " << x_edges[i][j].getR() << "y " << y_edges[i][j].getR() << endl;
 
-            double slope = sin(angle * pi / 180) / cos(angle * pi / 180);
+                double slope = sin(angle * pi / 180) / cos(angle * pi / 180);
 
-            Line l(Point(i, j), slope, height, width);
-            l.draw_line(votes);
+                Line l(Point(i, j), slope, height, width);
+                Line x = l.make_perpendicular(Point(i, j));
+                x.draw_line(votes);
+            }
         }
     }
 
+    // show the lines perpendicular to circle when drawing final voting results
+    int max = 0;
+
     for(int i = 0; i < height; i++) {
         for(int j = 0; j < width; j++) {
-            if(votes[i][j] > center_threshold) {
-                votes[i][j] = 1;
+            if(votes[i][j] > max) {
+                max = votes[i][j];
             }
-            else {
+            if(votes[i][j] < center_threshold) {
                 votes[i][j] = 0;
             }
         }
     }
 
-
-
     ofstream out5("imagev.ppm");
     out5 << "P3" << endl;
     out5 << width << " " << height << endl;
-    out5 << "1" << endl;
+    out5 << max << endl;
     for(int i = 0; i < height; i++) {
         for(int j = 0; j < width; j++) {
-            if(votes[i][j] == 0) {
-                out5 << 0 << " " << 0 << " " << 0 << " ";
-            }
-            else {
-                out5 << 1 << " " << 1 << " " << 1 << " ";
-            }
+            out5 << votes[i][j] << " " << votes[i][j] << " " << votes[i][j] << " ";
         }
         out5 << endl;
     }
@@ -816,10 +824,6 @@ void part1(int threshold1 = 100, int threshold2 = 200, string filename = "image.
 }
 
 int main(int argc, char** argv) {
-    for(int i = 0; i < argc; i++) {
-        cout << i << " " << argv[i] << endl;
-    }
-    cout << stoi(argv[8]) << endl;
     if(argc > 8) {
         part1(stoi(argv[2]), stoi(argv[4]), argv[6], stoi(argv[8]));
     }

@@ -87,55 +87,39 @@ vector<vector<Pixel>> readPPM(string infile) {
     return pixels;
 }
 
-void histeresis(vector<vector<Pixel>> &pixels, int i, int j) {
-    if(pixels[i][j].getR() == 128) {
+void hysteresis(vector<vector<Pixel>> &pixels, int i, int j, vector<vector<int>> &visited) {
+    if(pixels[i][j].getR() != 0 && visited[i][j] != 1) {
         if(i + 1 < pixels.size()) {
-            if(pixels[i + 1][j].getR() == 255) {
-                pixels[i][j] = Pixel(255, 255, 255);
-                histeresis(pixels, i + 1, j);
-            }
+            visited[i][j] = 1;
+            hysteresis(pixels, i + 1, j, visited);
         }
         if(i - 1 >= 0) {
-            if(pixels[i - 1][j].getR() == 255) {
-                pixels[i][j] = Pixel(255, 255, 255);
-                histeresis(pixels, i - 1, j);
-            }
+            visited[i][j] = 1;
+            hysteresis(pixels, i - 1, j, visited);
         }
         if(j + 1 < pixels[0].size()) {
-            if(pixels[i][j + 1].getR() == 255) {
-                pixels[i][j] = Pixel(255, 255, 255);
-                histeresis(pixels, i, j + 1);
-            }
+            visited[i][j] = 1;
+            hysteresis(pixels, i, j + 1, visited);
         }
         if(j - 1 >= 0) {
-            if(pixels[i][j - 1].getR() == 255) {
-                pixels[i][j] = Pixel(255, 255, 255);
-                histeresis(pixels, i, j - 1);
-            }
+            visited[i][j] = 1;
+            hysteresis(pixels, i, j - 1, visited);
         }
         if(i + 1 < pixels.size() && j + 1 < pixels[0].size()) {
-            if(pixels[i + 1][j + 1].getR() == 255) {
-                pixels[i][j] = Pixel(255, 255, 255);
-                histeresis(pixels, i + 1, j + 1);
-            }
+            visited[i][j] = 1;
+            hysteresis(pixels, i + 1, j + 1, visited);
         }
         if(i - 1 >= 0 && j - 1 >= 0) {
-            if(pixels[i - 1][j - 1].getR() == 255) {
-                pixels[i][j] = Pixel(255, 255, 255);
-                histeresis(pixels, i - 1, j - 1);
-            }
+            visited[i][j] = 1;
+            hysteresis(pixels, i - 1, j - 1, visited);
         }
         if(i + 1 < pixels.size() && j - 1 >= 0) {
-            if(pixels[i + 1][j - 1].getR() == 255) {
-                pixels[i][j] = Pixel(255, 255, 255);
-                histeresis(pixels, i + 1, j - 1);
-            }
+            visited[i][j] = 1;
+            hysteresis(pixels, i + 1, j - 1, visited);
         }
         if(i - 1 >= 0 && j + 1 < pixels[0].size()) {
-            if(pixels[i - 1][j + 1].getR() == 255) {
-                pixels[i][j] = Pixel(255, 255, 255);
-                histeresis(pixels, i - 1, j + 1);
-            }
+            visited[i][j] = 1;
+            hysteresis(pixels, i - 1, j + 1, visited);
         }
     }
 }
@@ -342,14 +326,22 @@ void part2() {
         }
     }
 
+    vector<vector<int>> visited(height, vector<int>(width, 0));
+
     for(int i = 0; i < height; i++) {
         for(int j = 0; j < width; j++) {
-            histeresis(edges, i, j);
+            if(edges[i][j].getR() == 255) {
+                hysteresis(edges, i, j, visited);
+            }
         }
     }
+
     for(int i = 0; i < height; i++) {
         for(int j = 0; j < width; j++) {
-            if(edges[i][j].getR() == 128) {
+            if(visited[i][j] == 1) {
+                edges[i][j] = Pixel(255, 255, 255);
+            }
+            else {
                 edges[i][j] = Pixel(0, 0, 0);
             }
         }
@@ -477,14 +469,22 @@ void part3(int threshold1 = 100, int threshold2 = 200, string filename = "image.
         }
     }
 
+    vector<vector<int>> visited1(height, vector<int>(width, 0));
+
     for(int i = 0; i < height; i++) {
         for(int j = 0; j < width; j++) {
-            histeresis(threshold_only_edges, i, j);
+            if(threshold_only_edges[i][j].getR() == 255) {
+                hysteresis(threshold_only_edges, i, j, visited1);
+            }
         }
     }
+
     for(int i = 0; i < height; i++) {
         for(int j = 0; j < width; j++) {
-            if(threshold_only_edges[i][j].getR() == 128) {
+            if(visited1[i][j] == 1) {
+                threshold_only_edges[i][j] = Pixel(255, 255, 255);
+            }
+            else {
                 threshold_only_edges[i][j] = Pixel(0, 0, 0);
             }
         }
@@ -655,14 +655,22 @@ void part3(int threshold1 = 100, int threshold2 = 200, string filename = "image.
         }
     }
 
+    vector<vector<int>> visited2(height, vector<int>(width, 0));
+
     for(int i = 0; i < height; i++) {
         for(int j = 0; j < width; j++) {
-            histeresis(edges, i, j);
+            if(edges[i][j].getR() == 255) {
+                hysteresis(edges, i, j, visited2);
+            }
         }
     }
+
     for(int i = 0; i < height; i++) {
         for(int j = 0; j < width; j++) {
-            if(edges[i][j].getR() == 128) {
+            if(visited2[i][j] == 1) {
+                edges[i][j] = Pixel(255, 255, 255);
+            }
+            else {
                 edges[i][j] = Pixel(0, 0, 0);
             }
         }
