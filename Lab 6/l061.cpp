@@ -49,20 +49,13 @@ class Point {
 
 // set pixel to be 1 (black pixel)
 void cast_vote(int **pixels, int x, int y, int height, int width) {
-    if(x < 0 || x > width - 1 || y < 0 || y > height - 1);
+    if(x < 0 || x > height - 1 || y < 0 || y > width - 1);
     else {
-        pixels[y][x] += 1; // reverse the order because of arrays
-    }
-}
-
-// scales point to canvas dimensions
-void cast_vote(int **pixels, Point p, int height, int width) {
-    int x = static_cast<int>(p.getX() * width);
-    int y = static_cast<int>(p.getY() * height);
-
-    if(x < 0 || x > width - 1 || y < 0 || y > height - 1);
-    else {
-        pixels[y][x] += 1; // reverse the order because of arrays
+        // cout << height << " " << width << endl;
+        // cout << x << " " << y << endl;
+        // cout << static_cast<int>(x * height / static_cast<double>(width)) << " " << static_cast<int>(y * width / static_cast<double>(height)) << endl;
+        // cout << endl;
+        pixels[x][y] += 1;
     }
 }
 
@@ -126,8 +119,8 @@ class Line {
             // both points intersect with top right bottom or left of screen
             // check x = canvas_width, if 0 <= y && y <= canvas_height we're good
             // else plug in y = 0, solve for x
-            Point scaled_first;
-            Point scaled_second;
+            Point scaled_first(-1.0, -1.0);
+            Point scaled_second(-1.0, -1.0);
 
             // check 0 slope
             if((-threshold <= slope) && (slope <= threshold)) {
@@ -143,17 +136,17 @@ class Line {
             }
             else {
                 // check right side
-                double right_y = slope * (canvas_width - first.getX()) + first.getY();
+                double right_y = slope * (canvas_height - first.getX()) + first.getY();
                 if((0 <= right_y) && (right_y <= canvas_height)) {
                     // hits the right side of the screen
-                    scaled_first = Point(canvas_width, right_y);
+                    scaled_first = Point(canvas_height, right_y);
                 }
                 // check top
-                double top_x = (canvas_height - first.getY()) / slope + first.getX();
-                if((0 <= top_x) && (top_x <= canvas_height)) {
+                double top_x = (canvas_width - first.getY()) / slope + first.getX();
+                if((0 <= top_x) && (top_x <= canvas_width)) {
                     // hits the top of the screen
-                    if((scaled_first.getX() == 0.0) && (scaled_first.getY() == 0.0)) {
-                        scaled_first = Point(top_x, canvas_height);
+                    if((scaled_first.getX() == -1.0) && (scaled_first.getY() == -1.0)) {
+                        scaled_first = Point(top_x, canvas_width);
                     }
                     else {
                         scaled_second = Point(top_x, canvas_height);
@@ -163,37 +156,41 @@ class Line {
                 double left_y = slope * (0 - first.getX()) + first.getY();
                 if((0 <= left_y) && (left_y <= canvas_height)) {
                     // hits the left side of the screen
-                    if((scaled_first.getX() == 0.0) && (scaled_first.getY() == 0.0)) {
+                    if((scaled_first.getX() == -1.0) && (scaled_first.getY() == -1.0)) {
                         scaled_first = Point(0, left_y); 
                     }
-                    else if((scaled_second.getX() == 0.0) && (scaled_second.getY() == 0.0)){
+                    else if((scaled_second.getX() == -1.0) && (scaled_second.getY() == -1.0)){
                         scaled_second = Point(0, left_y); 
                     }
                 }
                 // check bottom
                 double bottom_x = (0 - first.getY()) / slope + first.getX();
-                if((0 <= bottom_x) && (bottom_x <= canvas_height) && ((scaled_second.getX() == 0.0) && (scaled_second.getY() == 0.0))) {
-                    // hits the top of the screen
+                if((0 <= bottom_x) && (bottom_x <= canvas_width) && ((scaled_second.getX() == -1.0) && (scaled_second.getY() == -1.0))) {
+                    // hits the bottom of the screen
                     scaled_second = Point(bottom_x, 0);
                 }
             }
 
-            // cout << scaled_first.getX() << " " << scaled_first.getY() << " " << scaled_second.getX() << " " << scaled_second.getY() << endl;
-
-            int dx = scaled_second.getX() - scaled_first.getX(); // x2 - x1
-            int dy = scaled_second.getY() - scaled_first.getY(); // y2 - y1
-            int error = abs(dy) - abs(dx);
-
-            // cout << error << endl;
-
-            if(error < 0 && scaled_second.getX() <= scaled_first.getX()) { // reverse the points
-                _draw_line_bresenham(pixels, scaled_second, scaled_first, canvas_height, canvas_width);
-            }
-            else if(error > 0 && scaled_second.getY() <= scaled_first.getY()) {
-                _draw_line_bresenham(pixels, scaled_second, scaled_first, canvas_height, canvas_width);
-            }
+            if(scaled_first.getX() == -1.0 || scaled_first.getY() == -1.0 || scaled_second.getX() == -1.0 || scaled_second.getY() == -1.0);
             else {
-                _draw_line_bresenham(pixels, scaled_first, scaled_second, canvas_height, canvas_width);
+
+                // cout << scaled_first.getX() << " " << scaled_first.getY() << " " << scaled_second.getX() << " " << scaled_second.getY() << endl;
+
+                int dx = scaled_second.getX() - scaled_first.getX(); // x2 - x1
+                int dy = scaled_second.getY() - scaled_first.getY(); // y2 - y1
+                int error = abs(dy) - abs(dx);
+
+                // cout << error << endl;
+
+                if(error < 0 && scaled_second.getX() <= scaled_first.getX()) { // reverse the points
+                    _draw_line_bresenham(pixels, scaled_second, scaled_first, canvas_height, canvas_width);
+                }
+                else if(error > 0 && scaled_second.getY() <= scaled_first.getY()) {
+                    _draw_line_bresenham(pixels, scaled_second, scaled_first, canvas_height, canvas_width);
+                }
+                else {
+                    _draw_line_bresenham(pixels, scaled_first, scaled_second, canvas_height, canvas_width);
+                }
             }
         }
 
@@ -467,7 +464,6 @@ void part1(int threshold1 = 100, int threshold2 = 200, string filename = "image.
     };
 
     for(int i = 1; i < height + 1; i++) {
-        // cout << "doing row " << i << endl;
         for(int j = 1; j < width + 1; j++) {
             int value = 0;
 
@@ -491,6 +487,34 @@ void part1(int threshold1 = 100, int threshold2 = 200, string filename = "image.
         blurred_pixels[i].push_back(Pixel(0, 0, 0));
     }
 
+    int maxblur = 0;
+    for(int i = 0; i < blurred_pixels.size(); i++) {
+        for(int j = 0; j < blurred_pixels[i].size(); j++) {
+            if(blurred_pixels[i][j].getR() > maxblur) {
+                maxblur = blurred_pixels[i][j].getR();
+            }
+        }
+    }
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    // output final edge detections to imagef.ppm
+    ofstream out7("imageb.ppm");
+    out7 << "P3" << endl;
+    out7 << width << " " << height << endl;
+    out7 << maxblur << endl;
+    for(int i = 0; i < height; i++) {
+        for(int j = 0; j < width; j++) {
+            out7 << blurred_pixels[i][j].getR() << " " << blurred_pixels[i][j].getG() << " " << blurred_pixels[i][j].getB() << " ";
+        }
+        out7 << endl;
+    }
+    out7.close();
+
     // x convolution
     
     vector<vector<Pixel>> x_edges(height, vector<Pixel>(width, Pixel(0, 0, 0)));
@@ -505,6 +529,16 @@ void part1(int threshold1 = 100, int threshold2 = 200, string filename = "image.
                     value += blurred_pixels[i + (k - 1)][j + (l - 1)].getR() * x_kernel[k][l]; // we can use getR because it's all the same after grayscaling
                 }
             }
+
+            // if(i == 1) {
+            //     cout << i << " " << j << " " << value << endl;
+            //     cout << blurred_pixels[i][j].getR() << " " << blurred_pixels[i][j].getG() << " " << blurred_pixels[i][j].getB() << " " << endl;
+            //     cout << blurred_pixels[i - 1][j - 1].getR() << " " << blurred_pixels[i][j - 1].getG() << " " << blurred_pixels[i + 1][j - 1].getB() << " " << endl;
+            //     cout << blurred_pixels[i - 1][j].getR() << " " << blurred_pixels[i][j].getG() << " " << blurred_pixels[i + 1][j].getB() << " " << endl;
+            //     cout << blurred_pixels[i - 1][j + 1].getR() << " " << blurred_pixels[i][j + 1].getG() << " " << blurred_pixels[i + 1][j + 1].getB() << " " << endl;
+            //     cout << endl;
+
+            // }
 
             x_edges[i - 1][j - 1] = Pixel(value, value, value);
         }
@@ -704,6 +738,23 @@ void part1(int threshold1 = 100, int threshold2 = 200, string filename = "image.
     //     }
     // }
 
+    // for(int i = 0; i < edges.size(); i++) {
+    //     cout << edges[i][0].getR() << " ";
+    //     cout << edges[i][width - 1].getR() << " ";
+    //     cout << edges[i][1].getR() << " ";
+    //     cout << edges[i][width - 2].getR() << endl;
+
+    //     cout << x_edges[i][0].getR() << " ";
+    //     cout << x_edges[i][width - 1].getR() << " ";
+    //     cout << x_edges[i][1].getR() << " ";
+    //     cout << x_edges[i][width - 2].getR() << endl;
+
+    //     cout << y_edges[i][0].getR() << " ";
+    //     cout << y_edges[i][width - 1].getR() << " ";
+    //     cout << y_edges[i][1].getR() << " ";
+    //     cout << y_edges[i][width - 2].getR() << endl;
+    // }
+
     for(int j = 0; j < width; j++) {
         edges[0][j] = Pixel(0, 0, 0);
         edges[height - 1][j] = Pixel(0, 0, 0);
@@ -783,13 +834,38 @@ void part1(int threshold1 = 100, int threshold2 = 200, string filename = "image.
 
                 Line l(Point(i, j), slope, height, width);
                 Line x = l.make_perpendicular(Point(i, j));
+                
+                
                 x.draw_line(votes);
             }
         }
     }
 
+    for(int j = 0; j < width; j++) {
+        votes[0][j] = 0;
+        votes[height - 1][j] = 0;
+        votes[1][j] = 0;
+        votes[height - 2][j] = 0;
+    }
+
+    for(int i = 0; i < height; i++) {
+        votes[i][0] = 0;
+        votes[i][width - 1] = 0;
+        votes[i][1] = 0;
+        votes[i][width - 2] = 0;
+    }
+
+
     // show the lines perpendicular to circle when drawing final voting results
     int max = 0;
+
+    // for(int i = 0; i < height; i++) {
+    //     for(int j = 0; j < width; j++) {
+    //         if(votes[i][j] > 100) {
+    //             votes[i][j] = 100;
+    //         }
+    //     }
+    // }
 
     for(int i = 0; i < height; i++) {
         for(int j = 0; j < width; j++) {
@@ -809,6 +885,13 @@ void part1(int threshold1 = 100, int threshold2 = 200, string filename = "image.
     for(int i = 0; i < height; i++) {
         for(int j = 0; j < width; j++) {
             out5 << votes[i][j] << " " << votes[i][j] << " " << votes[i][j] << " ";
+
+            // if(votes[i][j] == 0) {
+            //     out5 << 0 << " " << 0 << " " << 0 << " ";
+            // }
+            // else {
+            //     out5 << 1 << " " << 1 << " " << 1 << " ";
+            // }
         }
         out5 << endl;
     }
