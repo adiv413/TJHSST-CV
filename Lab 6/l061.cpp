@@ -51,10 +51,6 @@ class Point {
 void cast_vote(int **pixels, int x, int y, int height, int width) {
     if(x < 0 || x > height - 1 || y < 0 || y > width - 1);
     else {
-        // cout << height << " " << width << endl;
-        // cout << x << " " << y << endl;
-        // cout << static_cast<int>(x * height / static_cast<double>(width)) << " " << static_cast<int>(y * width / static_cast<double>(height)) << endl;
-        // cout << endl;
         pixels[x][y] += 1;
     }
 }
@@ -124,13 +120,11 @@ class Line {
 
             // check 0 slope
             if((-threshold <= slope) && (slope <= threshold)) {
-                // cout << "0" << endl;
                 scaled_first = Point(static_cast<double>(canvas_width), first.getY());
                 scaled_second = Point(-static_cast<double>(canvas_width), first.getY());
             }
             // check infinite slope
             else if(100000.0 <= abs(slope)) {
-                // cout << "1" << endl;
                 scaled_first = Point(first.getX(), static_cast<double>(canvas_height));
                 scaled_second = Point(first.getX(), -static_cast<double>(canvas_height));
             }
@@ -173,14 +167,9 @@ class Line {
 
             if(scaled_first.getX() == -1.0 || scaled_first.getY() == -1.0 || scaled_second.getX() == -1.0 || scaled_second.getY() == -1.0);
             else {
-
-                // cout << scaled_first.getX() << " " << scaled_first.getY() << " " << scaled_second.getX() << " " << scaled_second.getY() << endl;
-
                 int dx = scaled_second.getX() - scaled_first.getX(); // x2 - x1
                 int dy = scaled_second.getY() - scaled_first.getY(); // y2 - y1
                 int error = abs(dy) - abs(dx);
-
-                // cout << error << endl;
 
                 if(error < 0 && scaled_second.getX() <= scaled_first.getX()) { // reverse the points
                     _draw_line_bresenham(pixels, scaled_second, scaled_first, canvas_height, canvas_width);
@@ -282,7 +271,6 @@ class Line {
                 }
                 else { // normal case x driven
                     for(int i = p1.getX(); i <= p2.getX(); i++) {
-                        // cout << i << " " << j << " " << canvas_height << " " << canvas_width <<  endl;
                         cast_vote(pixels, i, j, canvas_height, canvas_width);
 
                         if(error >= 0) {
@@ -364,6 +352,53 @@ class Pixel {
         }
 };
 
+// set pixel to be 1 (black pixel)
+void color_pixel(vector<vector<Pixel>> &pixels, int x, int y, int height, int width) {
+    if(x < 0 || x > height - 1 || y < 0 || y > width - 1);
+    else {
+        pixels[x][y] = Pixel(255, 0, 0);
+    }
+}
+
+class Circle {
+    private:
+        Point center;
+        double radius;
+        int canvas_height;
+        int canvas_width;
+
+    public:
+
+        Circle(Point p1, double r, int c_h, int c_w) : center(p1), radius(r), canvas_height(c_h), canvas_width(c_w) {}
+
+        void draw_circle(vector<vector<Pixel>> &pixels) {
+            int x, y, xmax, y2, y2_new, ty;
+            xmax = (int) (radius * 0.70710678); // maximum x at radius/sqrt(2) + x0
+            y = radius;
+            y2 = y * y;
+            ty = (2 * y) - 1; y2_new = y2;
+            
+            for (x = 0; x <= xmax + 1; x++) {
+                if ((y2 - y2_new) >= ty) {
+                    y2 -= ty;
+                    y -= 1;
+                    ty -= 2;
+                }
+
+                color_pixel(pixels, x + center.getX(), y + center.getY(), canvas_height, canvas_width);
+                color_pixel(pixels, x + center.getX(), -y + center.getY(), canvas_height, canvas_width);
+                color_pixel(pixels, -x + center.getX(), y + center.getY(), canvas_height, canvas_width);
+                color_pixel(pixels, -x + center.getX(), -y + center.getY(), canvas_height, canvas_width);
+                color_pixel(pixels, y + center.getX(), x + center.getY(), canvas_height, canvas_width);
+                color_pixel(pixels, y + center.getX(), -x + center.getY(), canvas_height, canvas_width);
+                color_pixel(pixels, -y + center.getX(), x + center.getY(), canvas_height, canvas_width);
+                color_pixel(pixels, -y + center.getX(), -x + center.getY(), canvas_height, canvas_width);
+
+                y2_new -= (2 * x) - 3;
+            }
+        }
+};
+
 vector<vector<Pixel>> readPPM(string infile) {
     ifstream inp(infile);
     string temp1;
@@ -426,9 +461,7 @@ void hysteresis(vector<vector<Pixel>> &pixels, int i, int j, vector<vector<int>>
     }
 }
 
-void part1(int threshold1 = 100, int threshold2 = 200, string filename = "image.ppm", int center_threshold = 300) {
-    // cout << "sdklf" << center_threshold << endl;
-    // cout << "sssssssssssssssssssssssssssssssssssssss" << endl;
+void part1(int threshold1 = 75, int threshold2 = 115, string filename = "image.ppm", int center_threshold = 80) {
     const long double pi = 3.14159265358979323846;
 
     // read in the ppm file
@@ -496,25 +529,6 @@ void part1(int threshold1 = 100, int threshold2 = 200, string filename = "image.
         }
     }
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-    // output final edge detections to imagef.ppm
-    ofstream out7("imageb.ppm");
-    out7 << "P3" << endl;
-    out7 << width << " " << height << endl;
-    out7 << maxblur << endl;
-    for(int i = 0; i < height; i++) {
-        for(int j = 0; j < width; j++) {
-            out7 << blurred_pixels[i][j].getR() << " " << blurred_pixels[i][j].getG() << " " << blurred_pixels[i][j].getB() << " ";
-        }
-        out7 << endl;
-    }
-    out7.close();
-
     // x convolution
     
     vector<vector<Pixel>> x_edges(height, vector<Pixel>(width, Pixel(0, 0, 0)));
@@ -530,20 +544,9 @@ void part1(int threshold1 = 100, int threshold2 = 200, string filename = "image.
                 }
             }
 
-            // if(i == 1) {
-            //     cout << i << " " << j << " " << value << endl;
-            //     cout << blurred_pixels[i][j].getR() << " " << blurred_pixels[i][j].getG() << " " << blurred_pixels[i][j].getB() << " " << endl;
-            //     cout << blurred_pixels[i - 1][j - 1].getR() << " " << blurred_pixels[i][j - 1].getG() << " " << blurred_pixels[i + 1][j - 1].getB() << " " << endl;
-            //     cout << blurred_pixels[i - 1][j].getR() << " " << blurred_pixels[i][j].getG() << " " << blurred_pixels[i + 1][j].getB() << " " << endl;
-            //     cout << blurred_pixels[i - 1][j + 1].getR() << " " << blurred_pixels[i][j + 1].getG() << " " << blurred_pixels[i + 1][j + 1].getB() << " " << endl;
-            //     cout << endl;
-
-            // }
-
             x_edges[i - 1][j - 1] = Pixel(value, value, value);
         }
     }
-    // cout << "sdklkkkkkkkkkkkkkkk " << endl;
 
     // y convolution
     vector<vector<Pixel>> y_edges(height, vector<Pixel>(width, Pixel(0, 0, 0)));
@@ -727,34 +730,6 @@ void part1(int threshold1 = 100, int threshold2 = 200, string filename = "image.
         }
     }
 
-    // for(int i = 0; i < height; i++) {
-    //     for(int j = 0; j < width; j++) {
-    //         if(visited[i][j] == 1) {
-    //             edges[i][j] = Pixel(255, 255, 255);
-    //         }
-    //         else {
-    //             edges[i][j] = Pixel(0, 0, 0);
-    //         }
-    //     }
-    // }
-
-    // for(int i = 0; i < edges.size(); i++) {
-    //     cout << edges[i][0].getR() << " ";
-    //     cout << edges[i][width - 1].getR() << " ";
-    //     cout << edges[i][1].getR() << " ";
-    //     cout << edges[i][width - 2].getR() << endl;
-
-    //     cout << x_edges[i][0].getR() << " ";
-    //     cout << x_edges[i][width - 1].getR() << " ";
-    //     cout << x_edges[i][1].getR() << " ";
-    //     cout << x_edges[i][width - 2].getR() << endl;
-
-    //     cout << y_edges[i][0].getR() << " ";
-    //     cout << y_edges[i][width - 1].getR() << " ";
-    //     cout << y_edges[i][1].getR() << " ";
-    //     cout << y_edges[i][width - 2].getR() << endl;
-    // }
-
     for(int j = 0; j < width; j++) {
         edges[0][j] = Pixel(0, 0, 0);
         edges[height - 1][j] = Pixel(0, 0, 0);
@@ -819,17 +794,10 @@ void part1(int threshold1 = 100, int threshold2 = 200, string filename = "image.
         }
     }
 
-    // cout << "Voting..." << endl;
-
-    // for(int i = 0; i < )
-
     for(int i = 0; i < height; i++) {
         for(int j = 0; j < width; j++) {
             if(edges[i][j].getR() != 0) { 
                 double angle = atan2(y_edges[i][j].getR(), x_edges[i][j].getR()) * 180 / pi;
-                // cout << "angle " << angle << endl;
-                // cout << "x " << x_edges[i][j].getR() << "y " << y_edges[i][j].getR() << endl;
-
                 double slope = sin(angle * pi / 180) / cos(angle * pi / 180);
 
                 Line l(Point(i, j), slope, height, width);
@@ -855,25 +823,13 @@ void part1(int threshold1 = 100, int threshold2 = 200, string filename = "image.
         votes[i][width - 2] = 0;
     }
 
-
     // show the lines perpendicular to circle when drawing final voting results
     int max = 0;
-
-    // for(int i = 0; i < height; i++) {
-    //     for(int j = 0; j < width; j++) {
-    //         if(votes[i][j] > 100) {
-    //             votes[i][j] = 100;
-    //         }
-    //     }
-    // }
 
     for(int i = 0; i < height; i++) {
         for(int j = 0; j < width; j++) {
             if(votes[i][j] > max) {
                 max = votes[i][j];
-            }
-            if(votes[i][j] < center_threshold) {
-                votes[i][j] = 0;
             }
         }
     }
@@ -885,17 +841,50 @@ void part1(int threshold1 = 100, int threshold2 = 200, string filename = "image.
     for(int i = 0; i < height; i++) {
         for(int j = 0; j < width; j++) {
             out5 << votes[i][j] << " " << votes[i][j] << " " << votes[i][j] << " ";
-
-            // if(votes[i][j] == 0) {
-            //     out5 << 0 << " " << 0 << " " << 0 << " ";
-            // }
-            // else {
-            //     out5 << 1 << " " << 1 << " " << 1 << " ";
-            // }
         }
         out5 << endl;
     }
     out5.close();
+
+    // threshold votes
+
+    for(int i = 0; i < height; i++) {
+        for(int j = 0; j < width; j++) {
+            if(votes[i][j] < center_threshold) {
+                votes[i][j] = 0;
+            }
+        }
+    }
+
+    vector<vector<Pixel>> output = readPPM(filename);
+
+    for(int i = 0; i < height; i++) {
+        for(int j = 0; j < width; j++) {
+            if(votes[i][j] != 0) {
+                Circle c(Point(i, j), 1, height, width);
+                Circle c1(Point(i, j), 2, height, width);
+                Circle c2(Point(i, j), 3, height, width);
+                Circle c3(Point(i, j), 4, height, width);
+
+                c.draw_circle(output);
+                c1.draw_circle(output);
+                c2.draw_circle(output);
+                c3.draw_circle(output);
+            }
+        }
+    }
+
+    ofstream out6("imageCC.ppm");
+    out6 << "P3" << endl;
+    out6 << width << " " << height << endl;
+    out6 << 255 << endl;
+    for(int i = 0; i < height; i++) {
+        for(int j = 0; j < width; j++) {
+            out6 << output[i][j].getR() << " " << output[i][j].getB() << " " << output[i][j].getG() << " ";
+        }
+        out6 << endl;
+    }
+    out6.close();
 
 
     for(int i = 0; i < height; i++) {
