@@ -24,6 +24,17 @@ using namespace std;
 int width = 0;
 int height = 0;
 
+class HashFunction {
+public:
+    size_t operator()(const pair<int, int>& p) const
+    {
+        int x = p.first;
+        int y = p.second;
+
+        return abs((x + 2 * y * y) * (5 * x + 3 * y));
+    }
+};
+
 class Point {
     private:
         double x;
@@ -360,6 +371,13 @@ void color_pixel(vector<vector<Pixel>> &pixels, int x, int y, int height, int wi
     }
 }
 
+void vote_circle(vector<vector<Pixel>> &edges, unordered_map<pair<int, int>, vector<int>, HashFunction> &circle_votes, int x, int y, int height, int width, int radius, int center_x, int center_y) {
+    if(x < 0 || x > height - 1 || y < 0 || y > width - 1);
+    else if(edges[x][y].getR() != 0) {
+        circle_votes[make_pair(center_x,center_y)][radius] += 1;
+    }
+}
+
 class Circle {
     private:
         Point center;
@@ -393,6 +411,33 @@ class Circle {
                 color_pixel(pixels, y + center.getX(), -x + center.getY(), canvas_height, canvas_width);
                 color_pixel(pixels, -y + center.getX(), x + center.getY(), canvas_height, canvas_width);
                 color_pixel(pixels, -y + center.getX(), -x + center.getY(), canvas_height, canvas_width);
+
+                y2_new -= (2 * x) - 3;
+            }
+        }
+
+        void vote(vector<vector<Pixel>> &edges, unordered_map<pair<int, int>, vector<int>, HashFunction> &circle_votes) {
+            int x, y, xmax, y2, y2_new, ty;
+            xmax = (int) (radius * 0.70710678); // maximum x at radius/sqrt(2) + x0
+            y = radius;
+            y2 = y * y;
+            ty = (2 * y) - 1; y2_new = y2;
+            
+            for (x = 0; x <= xmax + 1; x++) {
+                if ((y2 - y2_new) >= ty) {
+                    y2 -= ty;
+                    y -= 1;
+                    ty -= 2;
+                }
+
+                vote_circle(edges, circle_votes, x + center.getX(), y + center.getY(), canvas_height, canvas_width, radius, center.getX(), center.getY());
+                vote_circle(edges, circle_votes, x + center.getX(), -y + center.getY(), canvas_height, canvas_width, radius, center.getX(), center.getY());
+                vote_circle(edges, circle_votes, -x + center.getX(), y + center.getY(), canvas_height, canvas_width, radius, center.getX(), center.getY());
+                vote_circle(edges, circle_votes, -x + center.getX(), -y + center.getY(), canvas_height, canvas_width, radius, center.getX(), center.getY());
+                vote_circle(edges, circle_votes, y + center.getX(), x + center.getY(), canvas_height, canvas_width, radius, center.getX(), center.getY());
+                vote_circle(edges, circle_votes, y + center.getX(), -x + center.getY(), canvas_height, canvas_width, radius, center.getX(), center.getY());
+                vote_circle(edges, circle_votes, -y + center.getX(), x + center.getY(), canvas_height, canvas_width, radius, center.getX(), center.getY());
+                vote_circle(edges, circle_votes, -y + center.getX(), -x + center.getY(), canvas_height, canvas_width, radius, center.getX(), center.getY());
 
                 y2_new -= (2 * x) - 3;
             }
@@ -461,7 +506,7 @@ void hysteresis(vector<vector<Pixel>> &pixels, int i, int j, vector<vector<int>>
     }
 }
 
-void part1(int threshold1 = 75, int threshold2 = 115, string filename = "image.ppm", int center_threshold = 80) {
+void part1(int threshold1 = 75, int threshold2 = 115, string filename = "image.ppm", int center_threshold = 40, int circle_threshold = 150) {
     const long double pi = 3.14159265358979323846;
 
     // read in the ppm file
@@ -856,11 +901,51 @@ void part1(int threshold1 = 75, int threshold2 = 115, string filename = "image.p
         }
     }
 
+    // threshold votes by local max
+
+    int radius_min = 1;
+    int radius_max = 120;
+
+    int radius_range = radius_max - radius_min + 1;
+
+    int local_max_grid_size = radius_max;
+
+    for(int i = 0; i < height; i += local_max_grid_size) {
+        for(int j = 0; j < width; j += local_max_grid_size) {
+            int local_max_votes = 0;
+            int local_max_k = 0;
+            int local_max_l = 0;
+
+            for(int k = i; k < min(height, i + local_max_grid_size); k++) { // if local max grid size is not divisible, it will miss the ends
+                for(int l = j; l < min(width, j + local_max_grid_size); l++) {
+                    if(votes[k][l] > local_max_votes) {
+                        local_max_votes = votes[k][l];
+                        local_max_k = k;
+                        local_max_l = l;
+                    }
+                }
+            }
+
+            for(int k = i; k < min(height, i + local_max_grid_size); k++) {
+                for(int l = j; l < min(width, j + local_max_grid_size); l++) {
+                    if(k != local_max_k || l != local_max_l) {
+                        votes[k][l] = 0;
+                    }
+                }
+            }
+        }
+    }    
+
+    // vote on circles for each candidate radius
+
     vector<vector<Pixel>> output = readPPM(filename);
+    unordered_map<pair<int, int>, vector<int>, HashFunction> circle_votes;
 
     for(int i = 0; i < height; i++) {
         for(int j = 0; j < width; j++) {
             if(votes[i][j] != 0) {
+                circle_votes[make_pair(i, j)] = vector<int>(radius_range);
+                
                 Circle c(Point(i, j), 1, height, width);
                 Circle c1(Point(i, j), 2, height, width);
                 Circle c2(Point(i, j), 3, height, width);
@@ -873,6 +958,9 @@ void part1(int threshold1 = 75, int threshold2 = 115, string filename = "image.p
             }
         }
     }
+    cout << "skd" << endl;
+
+    // draw candidate centers
 
     ofstream out6("imageCC.ppm");
     out6 << "P3" << endl;
@@ -886,6 +974,113 @@ void part1(int threshold1 = 75, int threshold2 = 115, string filename = "image.p
     }
     out6.close();
 
+    // free memory for unused vectors
+
+    vector<vector<Pixel>>().swap(pixels);
+    vector<vector<Pixel>>().swap(output);
+    vector<vector<Pixel>>().swap(blurred_pixels);
+    vector<vector<Pixel>>().swap(x_edges);
+    vector<vector<Pixel>>().swap(y_edges);
+    vector<vector<int>>().swap(x_kernel);
+    vector<vector<int>>().swap(y_kernel);
+    vector<vector<int>>().swap(angles);
+    vector<vector<int>>().swap(visited);
+
+    for(int i = 0; i < height; i++) {
+        for(int j = 0; j < width; j++) {
+            if(votes[i][j] != 0) {
+                // cout << i << " " << j << endl;
+                for(int r = 1; r < radius_range; r++) {
+                    Circle c(Point(i, j), r, height, width);
+                    c.vote(edges, circle_votes);
+                }
+            }
+        }
+    }
+
+    // find final centers by max thresholding at each candidate radius
+
+    unordered_map<pair<int, int>, int, HashFunction> final_centers;
+
+    for(int i = 0; i < height; i++) {
+        for(int j = 0; j < width; j++) {
+            if(votes[i][j] != 0) {
+                int max_r_votes = 0;
+                int max_r = 1;
+
+                for(int r = 1; r < radius_range; r++) {
+                    if(circle_votes[make_pair(i, j)][r] >= max_r_votes) {
+                        max_r_votes = circle_votes[make_pair(i, j)][r];
+                        max_r = r;
+                    }
+                }
+
+                if(max_r_votes > circle_threshold) {
+                    final_centers[make_pair(i, j)] = max_r;
+                }
+            }
+        }
+    }
+
+    // threshold final centers via local max
+
+    // for(auto p : final_centers) {
+    //     int i = p.first.first;
+    //     int j = p.first.second;
+    //     int r = p.second;
+
+    //     int local_max_votes = 0;
+    //     int local_max_k = 0;
+    //     int local_max_l = 0;
+        
+    //     int i_begin = std::max(0, i - local_max_grid_size / 2);
+    //     int i_end = std::min(i + local_max_grid_size / 2, height);
+
+    //     for(int k = i_begin; k < i_end; k++) { // if local max grid size is not divisible, it will miss the ends
+    //         for(int l = j; l < min(width, j + local_max_grid_size); l++) {
+    //             if(votes[k][l] > local_max_votes) {
+    //                 local_max_votes = votes[k][l];
+    //                 local_max_k = k;
+    //                 local_max_l = l;
+    //             }
+    //         }
+    //     }
+
+    //     for(int k = i; k < min(height, i + local_max_grid_size); k++) {
+    //         for(int l = j; l < min(width, j + local_max_grid_size); l++) {
+    //             if(k != local_max_k || l != local_max_l) {
+    //                 votes[k][l] = 0;
+    //             }
+    //         }
+    //     }
+    // }
+
+    vector<vector<Pixel>> output2 = readPPM(filename);
+
+    for(auto p : final_centers) {
+        Circle c(Point(p.first.first, p.first.second), p.second, height, width);
+        c.draw_circle(output2);
+        int i = p.first.first;
+        int j = p.first.second;
+        int r = p.second;
+
+        cout << i << " " << j << " " << circle_votes[make_pair(i, j)][r] << " " << r << endl;
+    }
+
+    cout << "sk123123123d" << endl;
+
+    ofstream out7("image_with_circles.ppm");
+    out7 << "P3" << endl;
+    out7 << width << " " << height << endl;
+    out7 << 255 << endl;
+    for(int i = 0; i < height; i++) {
+        for(int j = 0; j < width; j++) {
+            out7 << output2[i][j].getR() << " " << output2[i][j].getB() << " " << output2[i][j].getG() << " ";
+        }
+        out7 << endl;
+    }
+    out7.close();
+    
 
     for(int i = 0; i < height; i++) {
         delete[] votes[i];
