@@ -21,6 +21,16 @@
 
 using namespace std;
 
+enum class Color {
+    WHITE,
+    BLACK,
+    RED,
+    PURPLE,
+    BLUE,
+    GREEN,
+    YELLOW
+};
+
 int width = 0;
 int height = 0;
 
@@ -364,10 +374,30 @@ class Pixel {
 };
 
 // set pixel to be 1 (black pixel)
-void color_pixel(vector<vector<Pixel>> &pixels, int x, int y, int height, int width) {
+void color_pixel(vector<vector<Pixel>> &pixels, int x, int y, int height, int width, Color color) {
     if(x < 0 || x > height - 1 || y < 0 || y > width - 1);
     else {
-        pixels[x][y] = Pixel(255, 0, 0);
+        if(color == Color::WHITE) {
+            pixels[x][y] = Pixel(255, 255, 255);
+        }
+        else if(color == Color::RED) {
+            pixels[x][y] = Pixel(255, 0, 0);
+        }
+        else if(color == Color::BLUE) {
+            pixels[x][y] = Pixel(0, 0, 255);
+        }
+        else if(color == Color::GREEN) {
+            pixels[x][y] = Pixel(0, 255, 0);
+        }
+        else if(color == Color::PURPLE) {
+            pixels[x][y] = Pixel(255, 0, 255);
+        }
+        else if(color == Color::YELLOW) {
+            pixels[x][y] = Pixel(255, 255, 0);
+        }
+        else {
+            pixels[x][y] = Pixel(0, 0, 0); // default to black
+        }
     }
 }
 
@@ -389,7 +419,7 @@ class Circle {
 
         Circle(Point p1, double r, int c_h, int c_w) : center(p1), radius(r), canvas_height(c_h), canvas_width(c_w) {}
 
-        void draw_circle(vector<vector<Pixel>> &pixels) {
+        void draw_circle(vector<vector<Pixel>> &pixels, Color color) {
             int x, y, xmax, y2, y2_new, ty;
             xmax = (int) (radius * 0.70710678); // maximum x at radius/sqrt(2) + x0
             y = radius;
@@ -403,14 +433,14 @@ class Circle {
                     ty -= 2;
                 }
 
-                color_pixel(pixels, x + center.getX(), y + center.getY(), canvas_height, canvas_width);
-                color_pixel(pixels, x + center.getX(), -y + center.getY(), canvas_height, canvas_width);
-                color_pixel(pixels, -x + center.getX(), y + center.getY(), canvas_height, canvas_width);
-                color_pixel(pixels, -x + center.getX(), -y + center.getY(), canvas_height, canvas_width);
-                color_pixel(pixels, y + center.getX(), x + center.getY(), canvas_height, canvas_width);
-                color_pixel(pixels, y + center.getX(), -x + center.getY(), canvas_height, canvas_width);
-                color_pixel(pixels, -y + center.getX(), x + center.getY(), canvas_height, canvas_width);
-                color_pixel(pixels, -y + center.getX(), -x + center.getY(), canvas_height, canvas_width);
+                color_pixel(pixels, x + center.getX(), y + center.getY(), canvas_height, canvas_width, color);
+                color_pixel(pixels, x + center.getX(), -y + center.getY(), canvas_height, canvas_width, color);
+                color_pixel(pixels, -x + center.getX(), y + center.getY(), canvas_height, canvas_width, color);
+                color_pixel(pixels, -x + center.getX(), -y + center.getY(), canvas_height, canvas_width, color);
+                color_pixel(pixels, y + center.getX(), x + center.getY(), canvas_height, canvas_width, color);
+                color_pixel(pixels, y + center.getX(), -x + center.getY(), canvas_height, canvas_width, color);
+                color_pixel(pixels, -y + center.getX(), x + center.getY(), canvas_height, canvas_width, color);
+                color_pixel(pixels, -y + center.getX(), -x + center.getY(), canvas_height, canvas_width, color);
 
                 y2_new -= (2 * x) - 3;
             }
@@ -506,7 +536,7 @@ void hysteresis(vector<vector<Pixel>> &pixels, int i, int j, vector<vector<int>>
     }
 }
 
-void part1(int threshold1 = 75, int threshold2 = 115, string filename = "image.ppm", int center_threshold = 40, int circle_threshold = 150) {
+void part1(int threshold1 = 55, int threshold2 = 120, string filename = "coins_easy.ppm", int center_threshold = 15, int circle_threshold = 15) {
     const long double pi = 3.14159265358979323846;
 
     // read in the ppm file
@@ -903,12 +933,10 @@ void part1(int threshold1 = 75, int threshold2 = 115, string filename = "image.p
 
     // threshold votes by local max
 
-    int radius_min = 1;
-    int radius_max = 120;
+    int radius_min = 70;
+    int radius_max = 135; // 175 for coins3.ppm
 
-    int radius_range = radius_max - radius_min + 1;
-
-    int local_max_grid_size = radius_max;
+    int local_max_grid_size = 2 * (4 * radius_max / 5);
 
     for(int i = 0; i < height; i += local_max_grid_size) {
         for(int j = 0; j < width; j += local_max_grid_size) {
@@ -944,21 +972,15 @@ void part1(int threshold1 = 75, int threshold2 = 115, string filename = "image.p
     for(int i = 0; i < height; i++) {
         for(int j = 0; j < width; j++) {
             if(votes[i][j] != 0) {
-                circle_votes[make_pair(i, j)] = vector<int>(radius_range);
+                circle_votes[make_pair(i, j)] = vector<int>(radius_max + 1);
                 
-                Circle c(Point(i, j), 1, height, width);
-                Circle c1(Point(i, j), 2, height, width);
-                Circle c2(Point(i, j), 3, height, width);
-                Circle c3(Point(i, j), 4, height, width);
-
-                c.draw_circle(output);
-                c1.draw_circle(output);
-                c2.draw_circle(output);
-                c3.draw_circle(output);
+                for(int e = 1; e < 5; e++) {
+                    Circle c(Point(i, j), e, height, width);
+                    c.draw_circle(output, Color::BLACK);
+                }
             }
         }
     }
-    cout << "skd" << endl;
 
     // draw candidate centers
 
@@ -968,7 +990,7 @@ void part1(int threshold1 = 75, int threshold2 = 115, string filename = "image.p
     out6 << 255 << endl;
     for(int i = 0; i < height; i++) {
         for(int j = 0; j < width; j++) {
-            out6 << output[i][j].getR() << " " << output[i][j].getB() << " " << output[i][j].getG() << " ";
+            out6 << output[i][j].getR() << " " << output[i][j].getG() << " " << output[i][j].getB() << " ";
         }
         out6 << endl;
     }
@@ -989,8 +1011,7 @@ void part1(int threshold1 = 75, int threshold2 = 115, string filename = "image.p
     for(int i = 0; i < height; i++) {
         for(int j = 0; j < width; j++) {
             if(votes[i][j] != 0) {
-                // cout << i << " " << j << endl;
-                for(int r = 1; r < radius_range; r++) {
+                for(int r = radius_min; r < radius_max; r++) {
                     Circle c(Point(i, j), r, height, width);
                     c.vote(edges, circle_votes);
                 }
@@ -998,7 +1019,7 @@ void part1(int threshold1 = 75, int threshold2 = 115, string filename = "image.p
         }
     }
 
-    // find final centers by max thresholding at each candidate radius
+    // find final centers by simple thresholding at each candidate radius
 
     unordered_map<pair<int, int>, int, HashFunction> final_centers;
 
@@ -1008,7 +1029,7 @@ void part1(int threshold1 = 75, int threshold2 = 115, string filename = "image.p
                 int max_r_votes = 0;
                 int max_r = 1;
 
-                for(int r = 1; r < radius_range; r++) {
+                for(int r = radius_min; r < radius_max; r++) {
                     if(circle_votes[make_pair(i, j)][r] >= max_r_votes) {
                         max_r_votes = circle_votes[make_pair(i, j)][r];
                         max_r = r;
@@ -1022,60 +1043,134 @@ void part1(int threshold1 = 75, int threshold2 = 115, string filename = "image.p
         }
     }
 
-    // threshold final centers via local max
+    // threshold final centers again via local max
 
-    // for(auto p : final_centers) {
-    //     int i = p.first.first;
-    //     int j = p.first.second;
-    //     int r = p.second;
-
-    //     int local_max_votes = 0;
-    //     int local_max_k = 0;
-    //     int local_max_l = 0;
-        
-    //     int i_begin = std::max(0, i - local_max_grid_size / 2);
-    //     int i_end = std::min(i + local_max_grid_size / 2, height);
-
-    //     for(int k = i_begin; k < i_end; k++) { // if local max grid size is not divisible, it will miss the ends
-    //         for(int l = j; l < min(width, j + local_max_grid_size); l++) {
-    //             if(votes[k][l] > local_max_votes) {
-    //                 local_max_votes = votes[k][l];
-    //                 local_max_k = k;
-    //                 local_max_l = l;
-    //             }
-    //         }
-    //     }
-
-    //     for(int k = i; k < min(height, i + local_max_grid_size); k++) {
-    //         for(int l = j; l < min(width, j + local_max_grid_size); l++) {
-    //             if(k != local_max_k || l != local_max_l) {
-    //                 votes[k][l] = 0;
-    //             }
-    //         }
-    //     }
-    // }
-
-    vector<vector<Pixel>> output2 = readPPM(filename);
+    vector<pair<int, int>> to_delete;
 
     for(auto p : final_centers) {
-        Circle c(Point(p.first.first, p.first.second), p.second, height, width);
-        c.draw_circle(output2);
         int i = p.first.first;
         int j = p.first.second;
         int r = p.second;
 
-        cout << i << " " << j << " " << circle_votes[make_pair(i, j)][r] << " " << r << endl;
+        int local_max_votes = 0;
+        int local_max_k = 0;
+        int local_max_l = 0;
+
+        int i_begin = std::max(0, i - local_max_grid_size / 2);
+        int i_end = std::min(i + local_max_grid_size / 2, height);
+
+        int j_begin = std::max(0, j - local_max_grid_size / 2);
+        int j_end = std::min(j + local_max_grid_size / 2, width);
+
+        for(int k = i_begin; k < i_end; k++) { // if local max grid size is not divisible, it will miss the ends
+            for(int l = j_begin; l < j_end; l++) {
+                if(final_centers.count(make_pair(k, l)) != 0) {
+                    to_delete.push_back(make_pair(k, l));
+                    int curr_circle_votes = circle_votes[make_pair(k, l)][final_centers[make_pair(k, l)]];
+                    
+                    if(curr_circle_votes > local_max_votes) {
+                        local_max_votes = curr_circle_votes;
+                        local_max_k = k;
+                        local_max_l = l;
+                    }
+                }
+            }
+        }
+
+        to_delete.erase(std::remove(to_delete.begin(), to_delete.end(), make_pair(local_max_k, local_max_l)), to_delete.end());
     }
 
-    cout << "sk123123123d" << endl;
+    for(pair<int, int> p : to_delete) {
+        final_centers.erase(p);
+    }
 
-    ofstream out7("image_with_circles.ppm");
+    // find coin type and draw final centers
+
+    vector<vector<Pixel>> raw_pixel_reading = readPPM(filename);
+    vector<vector<Pixel>> output2 = readPPM(filename);
+    
+    int num_pennies = 0;
+    int num_dimes = 0;
+    int num_nickels = 0;
+    int num_quarters = 0;
+    int num_silver_dollars = 0;
+
+    for(auto p : final_centers) {
+        int i = p.first.first;
+        int j = p.first.second;
+        int r = p.second;
+
+        if(!(i < 600 && j < 150)) {
+            Pixel pix = raw_pixel_reading[i][j];
+            int avg = (pix.getR() + pix.getG() + pix.getB()) / 3;
+            
+            if(pix.getR() >= pix.getG() + static_cast<int>(avg / 6)) { // penny, based on color
+                for(int e = -3; e < 5; e++) {
+                    Circle c(Point(i, j), std::max(1, r + e), height, width);
+                    c.draw_circle(output2, Color::RED);
+                }
+                num_pennies++;
+            }
+            else if(std::abs(pix.getR() - avg) <= 5 && std::abs(pix.getG() - avg) <= 5 && std::abs(pix.getB() - avg) <= 5); // not a coin, so skip
+            else {
+                if(150 <= r && r <= 175) { // silver dollar
+                    for(int e = -3; e < 5; e++) {
+                        Circle c(Point(i, j), std::max(radius_min, r + e), height, width);
+                        c.draw_circle(output2, Color::YELLOW);
+                    }
+                    num_silver_dollars++;
+                }
+                else if(109 <= r && r <= 133) { // quarter
+                    for(int e = -3; e < 5; e++) {
+                        Circle c(Point(i, j), std::max(radius_min, r + e), height, width);
+                        c.draw_circle(output2, Color::GREEN);
+                    }
+                    num_quarters++;
+                }
+                else if(93 <= r && r < 109) { // nickel
+                    for(int e = -3; e < 5; e++) {
+                        Circle c(Point(i, j), std::max(radius_min, r + e), height, width);
+                        c.draw_circle(output2, Color::PURPLE);
+                    }
+                    num_nickels++;
+                }
+                else if(80 <= r && r < 93) { // penny
+                    for(int e = -3; e < 5; e++) {
+                        Circle c(Point(i, j), std::max(radius_min, r + e), height, width);
+                        c.draw_circle(output2, Color::RED);
+                    }
+                    num_pennies++;
+                }
+                else if(70 <= r && r < 80) { // dime
+                    for(int e = -3; e < 5; e++) {
+                        Circle c(Point(i, j), std::max(radius_min, r + e), height, width);
+                        c.draw_circle(output2, Color::BLUE);
+                    }
+                    num_dimes++;
+                }
+            }
+
+            cout << i << " " << j << " " << r << " " << circle_votes[make_pair(i, j)][r] << endl;
+            cout << output2[i][j].getR() << " " << output2[i][j].getG() << " " << output2[i][j].getB() << endl;
+            cout << endl;
+        }
+    }
+
+    cout << num_pennies << " Pennies" << endl;
+    cout << num_nickels << " Nickels" << endl;
+    cout << num_dimes << " Dimes" << endl;
+    cout << num_quarters << " Quarters" << endl;
+    cout << num_silver_dollars << " Silver Dollars" << endl;
+
+    cout << "Total sum: $" << 0.01 * num_pennies + 0.05 * num_nickels + 0.1 * num_dimes + 0.25 * num_quarters + 0.5 * num_silver_dollars << endl;
+
+    ofstream out7("coins.ppm");
     out7 << "P3" << endl;
     out7 << width << " " << height << endl;
     out7 << 255 << endl;
     for(int i = 0; i < height; i++) {
         for(int j = 0; j < width; j++) {
-            out7 << output2[i][j].getR() << " " << output2[i][j].getB() << " " << output2[i][j].getG() << " ";
+            out7 << output2[i][j].getR() << " " << output2[i][j].getG() << " " << output2[i][j].getB() << " ";
         }
         out7 << endl;
     }
@@ -1091,7 +1186,10 @@ void part1(int threshold1 = 75, int threshold2 = 115, string filename = "image.p
 }
 
 int main(int argc, char** argv) {
-    if(argc > 8) {
+    if(argc > 10) {
+        part1(stoi(argv[2]), stoi(argv[4]), argv[6], stoi(argv[8]), stoi(argv[10]));
+    }
+    else if(argc > 8) {
         part1(stoi(argv[2]), stoi(argv[4]), argv[6], stoi(argv[8]));
     }
     else if(argc > 6) { 
