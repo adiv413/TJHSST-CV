@@ -1,0 +1,6 @@
+42 Pennies
+9 Nickels
+2 Dimes
+12 Quarters
+0 Silver Dollars
+Total sum: $4.07

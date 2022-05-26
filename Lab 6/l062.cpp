@@ -536,7 +536,441 @@ void hysteresis(vector<vector<Pixel>> &pixels, int i, int j, vector<vector<int>>
     }
 }
 
-void part1(int threshold1 = 55, int threshold2 = 120, string filename = "coins_easy.ppm", int center_threshold = 15, int circle_threshold = 15) {
+void part1(int threshold1 = 75, int threshold2 = 115, string filename = "image.ppm", int center_threshold = 80) {
+    const long double pi = 3.14159265358979323846;
+
+    // read in the ppm file
+    vector<vector<Pixel>> pixels = readPPM(filename);
+
+    // grayscale pixels
+    for(int i = 0; i < pixels.size(); i++) {
+        for(int j = 0; j < pixels[i].size(); j++) {
+            int r = pixels[i][j].getR();
+            int g = pixels[i][j].getG();
+            int b = pixels[i][j].getB();
+            int gray = (r + g + b) / 3;
+            pixels[i][j] = Pixel(gray, gray, gray);
+        }
+    }
+
+    // add zero padding=1 in preperation for convolution
+    pixels.insert(pixels.begin(), vector<Pixel>(width, Pixel(0, 0, 0)));
+    pixels.push_back(vector<Pixel>(width, Pixel(0, 0, 0)));
+
+    for(int i = 0; i < pixels.size(); i++) {
+        pixels[i].insert(pixels[i].begin(), Pixel(0, 0, 0));
+        pixels[i].push_back(Pixel(0, 0, 0));
+    }
+
+    // gaussian blur
+    vector<vector<Pixel>> blurred_pixels(height, vector<Pixel>(width, Pixel(0, 0, 0)));
+
+    vector<vector<double>> kernel = {
+        {1/16.0, 2/16.0, 1/16.0},
+        {2/16.0, 4/16.0, 2/16.0},
+        {1/16.0, 2/16.0, 1/16.0}
+    };
+
+    for(int i = 1; i < height + 1; i++) {
+        for(int j = 1; j < width + 1; j++) {
+            int value = 0;
+
+            for(int k = 0; k <= 2; k++) {
+                for(int l = 0; l <= 2; l++) {
+                    value += pixels[i + (k - 1)][j + (l - 1)].getR() * kernel[k][l]; // we can use getR because it's all the same after grayscaling
+                }
+            }
+
+            blurred_pixels[i - 1][j - 1] = Pixel(value, value, value);
+        }
+    }
+
+    // add padding for next convolution
+
+    blurred_pixels.insert(blurred_pixels.begin(), vector<Pixel>(width, Pixel(0, 0, 0)));
+    blurred_pixels.push_back(vector<Pixel>(width, Pixel(0, 0, 0)));
+
+    for(int i = 0; i < blurred_pixels.size(); i++) {
+        blurred_pixels[i].insert(blurred_pixels[i].begin(), Pixel(0, 0, 0));
+        blurred_pixels[i].push_back(Pixel(0, 0, 0));
+    }
+
+    int maxblur = 0;
+    for(int i = 0; i < blurred_pixels.size(); i++) {
+        for(int j = 0; j < blurred_pixels[i].size(); j++) {
+            if(blurred_pixels[i][j].getR() > maxblur) {
+                maxblur = blurred_pixels[i][j].getR();
+            }
+        }
+    }
+
+    // x convolution
+    
+    vector<vector<Pixel>> x_edges(height, vector<Pixel>(width, Pixel(0, 0, 0)));
+    vector<vector<int>> x_kernel = {{-1, 0, 1}, {-2, 0, 2}, {-1, 0, 1}};
+
+    for(int i = 1; i < height + 1; i++) {
+        for(int j = 1; j < width + 1; j++) {
+            int value = 0;
+
+            for(int k = 0; k <= 2; k++) {
+                for(int l = 0; l <= 2; l++) {
+                    value += blurred_pixels[i + (k - 1)][j + (l - 1)].getR() * x_kernel[k][l]; // we can use getR because it's all the same after grayscaling
+                }
+            }
+
+            x_edges[i - 1][j - 1] = Pixel(value, value, value);
+        }
+    }
+
+    // y convolution
+    vector<vector<Pixel>> y_edges(height, vector<Pixel>(width, Pixel(0, 0, 0)));
+    vector<vector<int>> y_kernel = {{1, 2, 1}, {0, 0, 0}, {-1, -2, -1}};
+
+    for(int i = 1; i < height + 1; i++) {
+        for(int j = 1; j < width + 1; j++) {
+            int value = 0;
+
+            for(int k = 0; k <= 2; k++) {
+                for(int l = 0; l <= 2; l++) {
+                    value += blurred_pixels[i + (k - 1)][j + (l - 1)].getR() * y_kernel[k][l]; // we can use getR because it's all the same after grayscaling
+                }
+            }
+
+            y_edges[i - 1][j - 1] = Pixel(value, value, value);
+        }
+    }
+
+    // combine x and y edges
+    vector<vector<Pixel>> edges(height, vector<Pixel>(width, Pixel(0, 0, 0)));
+    for(int i = 0; i < height; i++) {
+        for(int j = 0; j < width; j++) {
+            int value = sqrt(x_edges[i][j].getR() * x_edges[i][j].getR() + y_edges[i][j].getR() * y_edges[i][j].getR());
+            edges[i][j] = Pixel(value, value, value);
+        }
+    }
+
+    // find angles from x and y edges
+
+    vector<vector<int>> angles(height, vector<int>(width, 0));
+
+    for(int i = 0; i < height; i++) {
+        for(int j = 0; j < width; j++) {
+            double angle = atan2(y_edges[i][j].getR(), x_edges[i][j].getR()) * 180 / pi;
+            if(angle <= -157.5) {
+                angles[i][j] = 0;
+            }
+            else if(-157.5 <= angle && angle <= -112.5) {
+                angles[i][j] = 45;
+            }
+            else if(-112.5 <= angle && angle <= -67.5) {
+                angles[i][j] = 90;
+            }
+            else if(-67.5 <= angle && angle <= -22.5) {
+                angles[i][j] = 135;
+            }
+            else if(-22.5 <= angle && angle <= 22.5) {
+                angles[i][j] = 0;
+            }
+            else if(22.5 <= angle && angle <= 67.5) {
+                angles[i][j] = 45;
+            }
+            else if(67.5 <= angle && angle <= 112.5) {
+                angles[i][j] = 90;
+            }
+            else if(112.5 <= angle && angle <= 157.5) {
+                angles[i][j] = 135;
+            }
+            else if(angle >= 157.5) {
+                angles[i][j] = 0;
+            }
+        }
+    }
+
+    for(int i = 0; i < height; i++) {
+        for(int j = 0; j < width; j++) {
+            if(angles[i][j] == 0) {
+                int max = 0;
+
+                if(j > 0) {
+                    if(edges[i][j - 1].getR() > max) {
+                        max = edges[i][j - 1].getR();
+                    }
+                }
+                if(j < width - 1) {
+                    if(edges[i][j + 1].getR() > max) {
+                        max = edges[i][j + 1].getR();
+                    }
+                }
+
+                if(edges[i][j].getR() < max) {
+                    edges[i][j] = Pixel(0, 0, 0);
+                }
+            }
+            else if(angles[i][j] == 45) {
+                int max = 0;
+
+                if(i < height - 1 && j > 0) {
+                    if(edges[i + 1][j - 1].getR() > max) {
+                        max = edges[i + 1][j - 1].getR();
+                    }
+                }
+                if(i > 0 && j < width - 1) {
+                    if(edges[i - 1][j + 1].getR() > max) {
+                        max = edges[i - 1][j + 1].getR();
+                    }
+                }
+
+                if(edges[i][j].getR() < max) {
+                    edges[i][j] = Pixel(0, 0, 0);
+                }
+            }
+            else if(angles[i][j] == 90) {
+                int max = 0;
+
+                if(i > 0) {
+                    if(edges[i - 1][j].getR() > max) {
+                        max = edges[i - 1][j].getR();
+                    }
+                }
+                if(i < height - 1) {
+                    if(edges[i + 1][j].getR() > max) {
+                        max = edges[i + 1][j].getR();
+                    }
+                }
+
+                if(edges[i][j].getR() < max) {
+                    edges[i][j] = Pixel(0, 0, 0);
+                }
+            }
+            else if(angles[i][j] == 135) {
+                int max = 0;
+
+                if(i < height - 1 && j < width - 1) {
+                    if(edges[i + 1][j + 1].getR() > max) {
+                        max = edges[i + 1][j + 1].getR();
+                    }
+                }
+                if(i > 0 && j > 0) {
+                    if(edges[i - 1][j - 1].getR() > max) {
+                        max = edges[i - 1][j - 1].getR();
+                    }
+                }
+
+                if(edges[i][j].getR() < max) {
+                    edges[i][j] = Pixel(0, 0, 0);
+                }
+            }
+        }
+    }
+
+    // apply thresholding and hysteresis
+
+    for(int i = 0; i < height; i++) {
+        for(int j = 0; j < width; j++) {
+            if(edges[i][j].getR() > threshold2) {
+                edges[i][j] = Pixel(255, 255, 255);
+            } 
+            else if(edges[i][j].getR() > threshold1) {
+                edges[i][j] = Pixel(128, 128, 128);
+            }
+            else {
+                edges[i][j] = Pixel(0, 0, 0);
+            }
+        }
+    }
+
+    // vector<vector<int>> visited(height, vector<int>(width, 0));
+    // vector<vector<Pixel>> new_edges(height, vector<Pixel>(width, Pixel(0, 0, 0)));
+
+
+    vector<vector<int>> visited(height, vector<int>(width, 0));
+
+    for(int i = 0; i < height; i++) {
+        for(int j = 0; j < width; j++) {
+            if(edges[i][j].getR() == 255) {
+                hysteresis(edges, i, j, visited);
+            }
+        }
+    }
+
+    for(int i = 0; i < height; i++) {
+        for(int j = 0; j < width; j++) {
+            if(visited[i][j] == 1) {
+                edges[i][j] = Pixel(255, 255, 255);
+            }
+            else {
+                edges[i][j] = Pixel(0, 0, 0);
+            }
+        }
+    }
+
+    for(int j = 0; j < width; j++) {
+        edges[0][j] = Pixel(0, 0, 0);
+        edges[height - 1][j] = Pixel(0, 0, 0);
+        edges[1][j] = Pixel(0, 0, 0);
+        edges[height - 2][j] = Pixel(0, 0, 0);
+
+        x_edges[0][j] = Pixel(0, 0, 0);
+        x_edges[height - 1][j] = Pixel(0, 0, 0);
+        x_edges[1][j] = Pixel(0, 0, 0);
+        x_edges[height - 2][j] = Pixel(0, 0, 0);
+
+        y_edges[0][j] = Pixel(0, 0, 0);
+        y_edges[height - 1][j] = Pixel(0, 0, 0);
+        y_edges[1][j] = Pixel(0, 0, 0);
+        y_edges[height - 2][j] = Pixel(0, 0, 0);
+    }
+
+    for(int i = 0; i < edges.size(); i++) {
+        edges[i][0] = Pixel(0, 0, 0);
+        edges[i][width - 1] = Pixel(0, 0, 0);
+        edges[i][1] = Pixel(0, 0, 0);
+        edges[i][width - 2] = Pixel(0, 0, 0);
+
+        x_edges[i][0] = Pixel(0, 0, 0);
+        x_edges[i][width - 1] = Pixel(0, 0, 0);
+        x_edges[i][1] = Pixel(0, 0, 0);
+        x_edges[i][width - 2] = Pixel(0, 0, 0);
+
+        y_edges[i][0] = Pixel(0, 0, 0);
+        y_edges[i][width - 1] = Pixel(0, 0, 0);
+        y_edges[i][1] = Pixel(0, 0, 0);
+        y_edges[i][width - 2] = Pixel(0, 0, 0);
+    }
+
+    // output final edge detections to imagef.ppm
+    ofstream out4("imagef.ppm");
+    out4 << "P3" << endl;
+    out4 << width << " " << height << endl;
+    out4 << "1" << endl;
+    for(int i = 0; i < height; i++) {
+        for(int j = 0; j < width; j++) {
+            if(edges[i][j].getR() == 0) {
+                out4 << 0 << " " << 0 << " " << 0 << " ";
+            }
+            else {
+                out4 << 1 << " " << 1 << " " << 1 << " ";
+            }
+        }
+        out4 << endl;
+    }
+    out4.close();
+
+    int **votes;
+    votes = new int*[height];
+    
+    for(int i = 0; i < height; i++) {
+        votes[i] = new int[width];
+
+        // initialize all values in pixel array to default value of 0 (white pixel)
+        for(int j = 0; j < width; j++) {
+            votes[i][j] = 0;
+        }
+    }
+
+    for(int i = 0; i < height; i++) {
+        for(int j = 0; j < width; j++) {
+            if(edges[i][j].getR() != 0) { 
+                double angle = atan2(y_edges[i][j].getR(), x_edges[i][j].getR()) * 180 / pi;
+                double slope = sin(angle * pi / 180) / cos(angle * pi / 180);
+
+                Line l(Point(i, j), slope, height, width);
+                Line x = l.make_perpendicular(Point(i, j));
+                
+                
+                x.draw_line(votes);
+            }
+        }
+    }
+
+    for(int j = 0; j < width; j++) {
+        votes[0][j] = 0;
+        votes[height - 1][j] = 0;
+        votes[1][j] = 0;
+        votes[height - 2][j] = 0;
+    }
+
+    for(int i = 0; i < height; i++) {
+        votes[i][0] = 0;
+        votes[i][width - 1] = 0;
+        votes[i][1] = 0;
+        votes[i][width - 2] = 0;
+    }
+
+    // show the lines perpendicular to circle when drawing final voting results
+    int max = 0;
+
+    for(int i = 0; i < height; i++) {
+        for(int j = 0; j < width; j++) {
+            if(votes[i][j] > max) {
+                max = votes[i][j];
+            }
+        }
+    }
+
+    ofstream out5("imagev.ppm");
+    out5 << "P3" << endl;
+    out5 << width << " " << height << endl;
+    out5 << max << endl;
+    for(int i = 0; i < height; i++) {
+        for(int j = 0; j < width; j++) {
+            out5 << votes[i][j] << " " << votes[i][j] << " " << votes[i][j] << " ";
+        }
+        out5 << endl;
+    }
+    out5.close();
+
+    // threshold votes
+
+    for(int i = 0; i < height; i++) {
+        for(int j = 0; j < width; j++) {
+            if(votes[i][j] < center_threshold) {
+                votes[i][j] = 0;
+            }
+        }
+    }
+
+    vector<vector<Pixel>> output = readPPM(filename);
+
+    for(int i = 0; i < height; i++) {
+        for(int j = 0; j < width; j++) {
+            if(votes[i][j] != 0) {
+                Circle c(Point(i, j), 1, height, width);
+                Circle c1(Point(i, j), 2, height, width);
+                Circle c2(Point(i, j), 3, height, width);
+                Circle c3(Point(i, j), 4, height, width);
+
+                c.draw_circle(output, Color::RED);
+                c1.draw_circle(output, Color::RED);
+                c2.draw_circle(output, Color::RED);
+                c3.draw_circle(output, Color::RED);
+            }
+        }
+    }
+
+    ofstream out6("imageCC.ppm");
+    out6 << "P3" << endl;
+    out6 << width << " " << height << endl;
+    out6 << 255 << endl;
+    for(int i = 0; i < height; i++) {
+        for(int j = 0; j < width; j++) {
+            out6 << output[i][j].getR() << " " << output[i][j].getB() << " " << output[i][j].getG() << " ";
+        }
+        out6 << endl;
+    }
+    out6.close();
+
+
+    for(int i = 0; i < height; i++) {
+        delete[] votes[i];
+    }
+
+    delete[] votes;
+
+}
+
+void part2(int threshold1 = 55, int threshold2 = 120, string filename = "coins2.ppm", int center_threshold = 15, int circle_threshold = 15, int r_max = 135, int window_size = 135) {
     const long double pi = 3.14159265358979323846;
 
     // read in the ppm file
@@ -934,9 +1368,9 @@ void part1(int threshold1 = 55, int threshold2 = 120, string filename = "coins_e
     // threshold votes by local max
 
     int radius_min = 70;
-    int radius_max = 135; // 175 for coins3.ppm
+    int radius_max = r_max; // 175 for coins3.ppm
 
-    int local_max_grid_size = 2 * (4 * radius_max / 5);
+    int local_max_grid_size = window_size;
 
     for(int i = 0; i < height; i += local_max_grid_size) {
         for(int j = 0; j < width; j += local_max_grid_size) {
@@ -1100,59 +1534,53 @@ void part1(int threshold1 = 55, int threshold2 = 120, string filename = "coins_e
         int j = p.first.second;
         int r = p.second;
 
-        if(!(i < 600 && j < 150)) {
-            Pixel pix = raw_pixel_reading[i][j];
-            int avg = (pix.getR() + pix.getG() + pix.getB()) / 3;
-            
-            if(pix.getR() >= pix.getG() + static_cast<int>(avg / 6)) { // penny, based on color
+        Pixel pix = raw_pixel_reading[i][j];
+        int avg = (pix.getR() + pix.getG() + pix.getB()) / 3;
+        
+        if(pix.getR() >= pix.getG() + static_cast<int>(avg / 6)) { // penny, based on color
+            for(int e = -3; e < 5; e++) {
+                Circle c(Point(i, j), std::max(1, r + e), height, width);
+                c.draw_circle(output2, Color::RED);
+            }
+            num_pennies++;
+        }
+        else if(std::abs(pix.getR() - avg) <= 5 && std::abs(pix.getG() - avg) <= 5 && std::abs(pix.getB() - avg) <= 5); // not a coin, so skip
+        else {
+            if(150 <= r && r <= 175) { // silver dollar
                 for(int e = -3; e < 5; e++) {
-                    Circle c(Point(i, j), std::max(1, r + e), height, width);
+                    Circle c(Point(i, j), std::max(radius_min, r + e), height, width);
+                    c.draw_circle(output2, Color::YELLOW);
+                }
+                num_silver_dollars++;
+            }
+            else if(109 <= r && r <= 133) { // quarter
+                for(int e = -3; e < 5; e++) {
+                    Circle c(Point(i, j), std::max(radius_min, r + e), height, width);
+                    c.draw_circle(output2, Color::GREEN);
+                }
+                num_quarters++;
+            }
+            else if(93 <= r && r < 109) { // nickel
+                for(int e = -3; e < 5; e++) {
+                    Circle c(Point(i, j), std::max(radius_min, r + e), height, width);
+                    c.draw_circle(output2, Color::PURPLE);
+                }
+                num_nickels++;
+            }
+            else if(80 <= r && r < 93) { // penny
+                for(int e = -3; e < 5; e++) {
+                    Circle c(Point(i, j), std::max(radius_min, r + e), height, width);
                     c.draw_circle(output2, Color::RED);
                 }
                 num_pennies++;
             }
-            else if(std::abs(pix.getR() - avg) <= 5 && std::abs(pix.getG() - avg) <= 5 && std::abs(pix.getB() - avg) <= 5); // not a coin, so skip
-            else {
-                if(150 <= r && r <= 175) { // silver dollar
-                    for(int e = -3; e < 5; e++) {
-                        Circle c(Point(i, j), std::max(radius_min, r + e), height, width);
-                        c.draw_circle(output2, Color::YELLOW);
-                    }
-                    num_silver_dollars++;
+            else if(70 <= r && r < 80) { // dime
+                for(int e = -3; e < 5; e++) {
+                    Circle c(Point(i, j), std::max(radius_min, r + e), height, width);
+                    c.draw_circle(output2, Color::BLUE);
                 }
-                else if(109 <= r && r <= 133) { // quarter
-                    for(int e = -3; e < 5; e++) {
-                        Circle c(Point(i, j), std::max(radius_min, r + e), height, width);
-                        c.draw_circle(output2, Color::GREEN);
-                    }
-                    num_quarters++;
-                }
-                else if(93 <= r && r < 109) { // nickel
-                    for(int e = -3; e < 5; e++) {
-                        Circle c(Point(i, j), std::max(radius_min, r + e), height, width);
-                        c.draw_circle(output2, Color::PURPLE);
-                    }
-                    num_nickels++;
-                }
-                else if(80 <= r && r < 93) { // penny
-                    for(int e = -3; e < 5; e++) {
-                        Circle c(Point(i, j), std::max(radius_min, r + e), height, width);
-                        c.draw_circle(output2, Color::RED);
-                    }
-                    num_pennies++;
-                }
-                else if(70 <= r && r < 80) { // dime
-                    for(int e = -3; e < 5; e++) {
-                        Circle c(Point(i, j), std::max(radius_min, r + e), height, width);
-                        c.draw_circle(output2, Color::BLUE);
-                    }
-                    num_dimes++;
-                }
+                num_dimes++;
             }
-
-            cout << i << " " << j << " " << r << " " << circle_votes[make_pair(i, j)][r] << endl;
-            cout << output2[i][j].getR() << " " << output2[i][j].getG() << " " << output2[i][j].getB() << endl;
-            cout << endl;
         }
     }
 
@@ -1163,6 +1591,18 @@ void part1(int threshold1 = 55, int threshold2 = 120, string filename = "coins_e
     cout << num_silver_dollars << " Silver Dollars" << endl;
 
     cout << "Total sum: $" << 0.01 * num_pennies + 0.05 * num_nickels + 0.1 * num_dimes + 0.25 * num_quarters + 0.5 * num_silver_dollars << endl;
+
+    ofstream results("results.txt");
+
+    results << num_pennies << " Pennies" << endl;
+    results << num_nickels << " Nickels" << endl;
+    results << num_dimes << " Dimes" << endl;
+    results << num_quarters << " Quarters" << endl;
+    results << num_silver_dollars << " Silver Dollars" << endl;
+
+    results << "Total sum: $" << 0.01 * num_pennies + 0.05 * num_nickels + 0.1 * num_dimes + 0.25 * num_quarters + 0.5 * num_silver_dollars << endl;
+
+    results.close();
 
     ofstream out7("coins.ppm");
     out7 << "P3" << endl;
@@ -1186,22 +1626,28 @@ void part1(int threshold1 = 55, int threshold2 = 120, string filename = "coins_e
 }
 
 int main(int argc, char** argv) {
-    if(argc > 10) {
-        part1(stoi(argv[2]), stoi(argv[4]), argv[6], stoi(argv[8]), stoi(argv[10]));
+    if(argc > 14) {
+        part2(stoi(argv[2]), stoi(argv[4]), argv[6], stoi(argv[8]), stoi(argv[10]), stoi(argv[12]), stoi(argv[14]));
+    }
+    else if(argc > 12) {
+        part2(stoi(argv[2]), stoi(argv[4]), argv[6], stoi(argv[8]), stoi(argv[10]), stoi(argv[12]));
+    }
+    else if(argc > 10) {
+        part2(stoi(argv[2]), stoi(argv[4]), argv[6], stoi(argv[8]), stoi(argv[10]));
     }
     else if(argc > 8) {
-        part1(stoi(argv[2]), stoi(argv[4]), argv[6], stoi(argv[8]));
+        part2(stoi(argv[2]), stoi(argv[4]), argv[6], stoi(argv[8]));
     }
     else if(argc > 6) { 
-        part1(stoi(argv[2]), stoi(argv[4]), argv[6]);
+        part2(stoi(argv[2]), stoi(argv[4]), argv[6]);
     }
     else if(argc > 4) {
-        part1(stoi(argv[2]), stoi(argv[4]));
+        part2(stoi(argv[2]), stoi(argv[4]));
     }
     else if(argc > 2) {
-        part1(stoi(argv[2]));
+        part2(stoi(argv[2]));
     }
     else {
-        part1();
+        part2();
     }
 }
